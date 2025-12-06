@@ -70,7 +70,7 @@ wheels = [
 ]
 
 [[package]]
-name = "infectious-map"
+name = "kansenshou"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
