@@ -73,7 +73,7 @@
           <div class="chart-section" v-if="latestYearData.length > 0">
             <h3>{{ filters.disease }} - 最新年度詳細</h3>
             <TimeSeriesChart :title="`${filters.disease} - ${latestYear}年 週別推移`" :data="latestYearData" xField="週"
-              :yField="latestYear" :seriesName="`${latestYear}年`" :showArea="true" height="400px" />
+              :yField="String(latestYear)" :seriesName="`${latestYear}年`" :showArea="true" height="400px" />
           </div>
 
           <div class="chart-section">
@@ -181,19 +181,23 @@ export default {
       this.filteredData.forEach(row => {
         weekColumns.forEach(weekCol => {
           const weekNum = weekCol.replace('週', '')
+          const weekNumInt = parseInt(weekNum)
           const value = row[weekCol]
 
-          if (value !== null && value !== undefined && value !== '') {
-            result.push({
-              報告年: row.報告年,
-              報告週: row.報告週,
-              疾病: row.疾病,
-              年: row.年,
-              週: parseInt(weekNum),
-              週ラベル: `第${weekNum}週`,
-              定当: parseFloat(value)
-            })
+          // Skip if weekNum is not a valid number or value is empty
+          if (isNaN(weekNumInt) || value === null || value === undefined || value === '') {
+            return
           }
+
+          result.push({
+            報告年: row.報告年,
+            報告週: row.報告週,
+            疾病: row.疾病,
+            年: row.年,
+            週: weekNumInt,
+            週ラベル: `第${weekNum}週`,
+            定当: parseFloat(value)
+          })
         })
       })
 
@@ -206,12 +210,40 @@ export default {
     },
     latestYearData() {
       if (!this.latestYear) return []
-      return this.chartData
-        .filter(d => d.年 == this.latestYear)
+      
+      // Get data for the latest year (historical data year, not report year)
+      // chartData structure: {報告年, 報告週, 疾病, 年, 週, 週ラベル, 定当}
+      // We want to show all available weeks for the latest historical year
+      const latestYearChartData = this.chartData.filter(d => d.年 == this.latestYear)
+      
+      // Group by week number (週) to get unique weeks
+      // Since the same week might appear in multiple report dates, we take the latest report
+      const dataMap = new Map()
+      latestYearChartData.forEach(d => {
+        const weekKey = d.週
+        const existing = dataMap.get(weekKey)
+        // Keep the data from the latest report year/week
+        if (!existing || d.報告年 > existing.報告年 || 
+            (d.報告年 === existing.報告年 && d.報告週 > existing.報告週)) {
+          dataMap.set(weekKey, {
+            週: d.週,  // Already a number from chartData
+            週ラベル: d.週ラベル,
+            定当: d.定当
+          })
+        }
+      })
+      
+      // Sort by week number in descending order (latest first)
+      // TimeSeriesChart reverses the data, so descending input becomes ascending display
+      const sortedData = Array.from(dataMap.values())
+        .sort((a, b) => b.週 - a.週)
         .map(d => ({
           週: d.週ラベル,
-          [this.latestYear]: d.定当
+          週番号: d.週,
+          [String(this.latestYear)]: d.定当
         }))
+      
+      return sortedData
     },
     yearRangeText() {
       if (this.chartData.length === 0) return '過去10年間'
