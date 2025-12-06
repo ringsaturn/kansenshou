@@ -1,7 +1,7 @@
 <template>
   <div class="trend-view">
     <div class="card">
-      <h2>過去10年間トレンドデータ</h2>
+      <h2>{{ yearRangeText }}トレンドデータ</h2>
 
       <div v-if="loading" class="loading">
         データを読み込み中...
@@ -61,12 +61,12 @@
         <!-- Chart View -->
         <div v-if="filters.disease" class="chart-view">
           <div class="chart-section">
-            <h3>{{ filters.disease }} - 過去10年間の推移比較</h3>
+            <h3>{{ filters.disease }} - {{ yearRangeText }}の推移比較</h3>
             <p class="chart-description">
               {{ filters.reportYear || '最新' }}年第{{ filters.reportWeek || '最新' }}週時点でのデータ。
-              各線は過去10年間の同週における定点当たり報告数を示しています。
+              各線は{{ yearRangeText }}の同週における定点当たり報告数を示しています。
             </p>
-            <HistoricalTrendChart :title="`${filters.disease} - 過去10年間トレンド`" :data="chartData"
+            <HistoricalTrendChart :title="`${filters.disease} - ${yearRangeText}トレンド`" :data="chartData"
               :disease="filters.disease" height="500px" />
           </div>
 
@@ -79,7 +79,7 @@
           <div class="chart-section">
             <h3>{{ filters.disease }} - 熱力カレンダー</h3>
             <p class="chart-description">
-              過去10年間の週別データを色の濃淡で表示。濃い色は報告数が多く、薄い色は少ないことを示します。
+              {{ yearRangeText }}の週別データを色の濃淡で表示。濃い色は報告数が多く、薄い色は少ないことを示します。
               季節性パターンや年ごとの違いを視覚的に把握できます。
             </p>
             <HeatmapCalendarChart :title="`${filters.disease} - 週別熱力マップ`" :data="chartData" :disease="filters.disease"
@@ -149,7 +149,7 @@ export default {
     filteredData() {
       let filtered = this.data
 
-            // If no report year/week selected, use latest report data by default
+      // If no report year/week selected, use latest report data by default
       if (!this.filters.reportYear && !this.filters.reportWeek) {
         // Find latest report year and week
         const latestYear = Math.max(...this.data.map(row => row.報告年))
@@ -173,8 +173,8 @@ export default {
       return filtered
     },
     chartData() {
-      // 为历史趋势图准备数据
-      // 将宽表数据转换为适合图表的格式
+      // Prepare data for historical trend chart
+      // Convert wide format data to chart-friendly format
       const result = []
       const weekColumns = Object.keys(this.data[0] || {}).filter(key => key.endsWith('週'))
 
@@ -212,6 +212,29 @@ export default {
           週: d.週ラベル,
           [this.latestYear]: d.定当
         }))
+    },
+    yearRangeText() {
+      if (this.chartData.length === 0) return '過去10年間'
+      const years = [...new Set(this.chartData.map(d => d.年))].sort((a, b) => a - b)
+      if (years.length === 0) return '過去10年間'
+
+      const yearCount = years.length
+      const minYear = years[0]
+      const maxYear = years[years.length - 1]
+
+      // If only one year of data
+      if (yearCount === 1) {
+        return `${minYear}年`
+      }
+
+      // If years are consecutive, show the count
+      const isConsecutive = years.every((year, i) => i === 0 || year === years[i - 1] + 1)
+      if (isConsecutive) {
+        return `過去${yearCount}年間`
+      }
+
+      // Otherwise show year range
+      return `${minYear}-${maxYear}年`
     }
   },
   methods: {
