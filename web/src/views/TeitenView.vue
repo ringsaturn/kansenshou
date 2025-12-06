@@ -82,6 +82,10 @@
             疾患を選択してグラフを表示してください
           </div>
           <div v-else-if="filters.prefecture === ''">
+            <HistoricalComparisonWidget v-if="selectedDisease && latestNationalDataPoint"
+              :disease="selectedDisease" :currentYear="latestNationalDataPoint.年" :currentWeek="latestNationalDataPoint.週"
+              :currentValue="latestNationalDataPoint[`${selectedDisease}_定当`]" />
+
             <div class="chart-section">
               <h3>{{ selectedDisease }} - 全国推移（総数）</h3>
               <TimeSeriesChart :title="`${selectedDisease} 報告数推移（全国総数）`" :data="nationalChartData" xField="週ラベル"
@@ -111,11 +115,6 @@
                 ]" height="450px" />
             </div>
           </div>
-
-          <!-- 历史对比组件 - 只在全国（総数）视图下显示 -->
-          <HistoricalComparisonWidget v-if="selectedDisease && latestNationalDataPoint && filters.prefecture === ''"
-            :disease="selectedDisease" :currentYear="latestNationalDataPoint.年" :currentWeek="latestNationalDataPoint.週"
-            :currentValue="latestNationalDataPoint[`${selectedDisease}_定当`]" />
         </div>
 
         <!-- Table View -->

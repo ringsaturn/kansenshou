@@ -1,7 +1,7 @@
 <template>
   <div class="historical-comparison">
     <div class="comparison-header">
-      <h3>📊 過去10年間との比較</h3>
+      <h3>📊 {{ comparisonTitle }}</h3>
     </div>
 
     <div class="comparison-content">
@@ -20,7 +20,7 @@
             <div class="stat-value" :class="comparisonClass">{{ currentValue }}</div>
           </div>
           <div class="stat-item">
-            <div class="stat-label">過去平均</div>
+            <div class="stat-label">過去平均 ({{ historicalYearsCount }}年間)</div>
             <div class="stat-value">{{ historicalAverage }}</div>
           </div>
           <div class="stat-item">
@@ -35,7 +35,7 @@
           </div>
         </div>
 
-        <HistoricalTrendChart :title="`${disease} - 過去10年間との比較`" :data="chartData" :disease="disease" height="450px" />
+        <HistoricalTrendChart :title="`${disease} - ${comparisonTitle}`" :data="chartData" :disease="disease" height="450px" />
       </div>
 
       <div v-else class="no-data-text">
@@ -149,6 +149,18 @@ export default {
       return this.currentWeekData
         .filter(d => d.年 != this.currentYear)
         .map(d => d.定当)
+    },
+    historicalYearsCount() {
+      // Count actual number of historical years
+      const years = new Set(this.currentWeekData
+        .filter(d => d.年 != this.currentYear)
+        .map(d => d.年))
+      return years.size
+    },
+    comparisonTitle() {
+      if (this.historicalYearsCount === 0) return '過去データとの比較'
+      if (this.historicalYearsCount >= 10) return '過去10年間との比較'
+      return `過去${this.historicalYearsCount}年間との比較`
     },
     historicalAverage() {
       if (this.historicalValues.length === 0) return '-'
