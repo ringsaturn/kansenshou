@@ -21,7 +21,7 @@ def download_csv(year: int, week: int, output_dir: Path, data_type: str = "zensu
     """
     # Build URL
     # trend data uses special filename format: week{week:02d}-trend.csv
-    # Starting from 2025 week 11, path changed to /jp/rapid/
+    # zensu path changed starting 2025 week 12 to /jp/rapid/
     if data_type == "trend":
         if year >= 2025 and week >= 11:
             url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/week{week:02d}-trend.csv"
@@ -30,6 +30,10 @@ def download_csv(year: int, week: int, output_dir: Path, data_type: str = "zensu
         output_file = output_dir / f"{year}-{week:02d}-trend.csv"
     # Starting from 2025, teiten data path changed to /jp/rapid/
     # ari data always uses /jp/rapid/
+    # zensu data path changed to /jp/rapid/ from 2025 week 12 onwards
+    elif data_type == "zensu" and (year > 2025 or (year == 2025 and week >= 12)):
+        url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
+        output_file = output_dir / f"{year}-{week:02d}-{data_type}.csv"
     elif data_type == "ari" or (data_type == "teiten" and year >= 2025):
         url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
         output_file = output_dir / f"{year}-{week:02d}-{data_type}.csv"
