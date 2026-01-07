@@ -27,6 +27,16 @@
           </div>
         </div>
 
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button :class="{ active: viewMode === 'chart' }" @click="viewMode = 'chart'">
+            📊 グラフ表示
+          </button>
+          <button :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">
+            📋 テーブル表示
+          </button>
+        </div>
+
         <div class="filters">
           <div class="filter-group">
             <label>年</label>
@@ -47,7 +57,7 @@
           <div class="filter-group">
             <label>都道府県</label>
             <select v-model="filters.prefecture">
-              <option value="">すべて</option>
+              <option value="">全国（総数）</option>
               <option v-for="pref in uniquePrefectures" :key="pref" :value="pref">{{ pref }}</option>
             </select>
           </div>
@@ -55,7 +65,7 @@
           <div class="filter-group">
             <label>表示する疾患</label>
             <select v-model="selectedDisease">
-              <option value="">すべて</option>
+              <option value="">疾患を選択してください</option>
               <option v-for="disease in diseaseList" :key="disease" :value="disease">{{ disease }}</option>
             </select>
           </div>
@@ -66,7 +76,67 @@
           </div>
         </div>
 
-        <div class="data-table-wrapper">
+        <!-- Chart View -->
+        <div v-if="viewMode === 'chart'" class="chart-view">
+          <div v-if="!selectedDisease" class="no-disease-selected">
+            <p>📊 上記のフィルタから疾患を選択して、データを可視化してください</p>
+          </div>
+          <div v-else>
+            <div v-if="filters.prefecture === ''">
+              <div class="chart-section">
+                <h3>{{ selectedDisease }} - 全国報告数推移（総数）</h3>
+                <TimeSeriesChart 
+                  :title="`${selectedDisease} - 全国報告数推移（総数）`" 
+                  :data="nationalChartData" 
+                  xField="週ラベル" 
+                  :yField="`${selectedDisease}_報告`"
+                  seriesName="報告数" 
+                  :showArea="true" 
+                  height="450px" />
+              </div>
+
+              <div class="chart-section" v-if="hasCumulativeData">
+                <h3>{{ selectedDisease }} - 全国累積報告数推移（総数）</h3>
+                <TimeSeriesChart 
+                  :title="`${selectedDisease} - 全国累積報告数推移（総数）`" 
+                  :data="nationalChartData" 
+                  xField="週ラベル"
+                  :yField="`${selectedDisease}_累積`" 
+                  seriesName="累積報告数" 
+                  height="400px" />
+              </div>
+
+              <div class="chart-section">
+                <h3>{{ selectedDisease }} - 都道府県別比較 (Top 15)</h3>
+                <PrefectureComparisonChart 
+                  :title="`${selectedDisease} - 都道府県別報告数`" 
+                  :data="prefectureComparisonData"
+                  :valueField="`${selectedDisease}_報告`" 
+                  :topN="15" 
+                  height="600px" />
+              </div>
+            </div>
+            <div v-else>
+              <div class="chart-section">
+                <h3>{{ filters.prefecture }} - {{ selectedDisease }}</h3>
+                <MultiSeriesChart 
+                  :title="`${filters.prefecture} - ${selectedDisease}`" 
+                  :data="chartData" 
+                  xField="週ラベル" 
+                  :series="chartSeries"
+                  height="450px" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div v-else>
+          <div v-if="!selectedDisease" class="no-disease-selected">
+            <p>📋 上記のフィルタから疾患を選択して、データを表示してください</p>
+          </div>
+          <div v-else>
+            <div class="data-table-wrapper">
           <table class="data-table">
             <thead>
               <tr>
@@ -98,6 +168,8 @@
           <span class="page-info">{{ currentPage }} / {{ totalPages }} ページ</span>
           <button @click="nextPage" :disabled="currentPage === totalPages">次へ</button>
         </div>
+          </div>
+        </div>
 
         <div class="data-source">
           <p>
@@ -117,9 +189,17 @@
 
 <script>
 import { parseCSV } from '../utils/csvParser.js'
+import TimeSeriesChart from '../components/TimeSeriesChart.vue'
+import MultiSeriesChart from '../components/MultiSeriesChart.vue'
+import PrefectureComparisonChart from '../components/PrefectureComparisonChart.vue'
 
 export default {
   name: 'ZensuView',
+  components: {
+    TimeSeriesChart,
+    MultiSeriesChart,
+    PrefectureComparisonChart
+  },
   data() {
     return {
       data: [],
@@ -132,7 +212,8 @@ export default {
       },
       selectedDisease: '',
       currentPage: 1,
-      itemsPerPage: 30
+      itemsPerPage: 30,
+      viewMode: 'chart' // 'chart' or 'table'
     }
   },
   computed: {
@@ -153,11 +234,10 @@ export default {
         '徳島県', '香川県', '愛媛県', '高知県',
         '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
       ]
+      // Exclude '総数' from the list as it's handled by the "全国（総数）" option (empty value)
       const prefs = [...new Set(this.data.map(row => row.都道府県))]
-        .filter(pref => pref && (pref === '総数' || prefectureOrder.includes(pref)))
+        .filter(pref => pref && pref !== '総数' && prefectureOrder.includes(pref))
       return prefs.sort((a, b) => {
-        if (a === '総数') return -1
-        if (b === '総数') return 1
         const indexA = prefectureOrder.indexOf(a)
         const indexB = prefectureOrder.indexOf(b)
         return indexA - indexB
@@ -186,7 +266,13 @@ export default {
       const filtered = this.data.filter(row => {
         if (this.filters.year && row.年 !== this.filters.year) return false
         if (this.filters.week && row.週 !== this.filters.week) return false
-        if (this.filters.prefecture && row.都道府県 !== this.filters.prefecture) return false
+        // When no prefecture selected (empty), show only 総数 (national total)
+        // When a specific prefecture is selected, show only that prefecture's data
+        if (this.filters.prefecture) {
+          if (row.都道府県 !== this.filters.prefecture) return false
+        } else {
+          if (row.都道府県 !== '総数') return false
+        }
         return true
       })
       // Sort by year and week in descending order (newest first)
@@ -202,6 +288,60 @@ export default {
       const start = (this.currentPage - 1) * this.itemsPerPage
       const end = start + this.itemsPerPage
       return this.filteredData.slice(start, end)
+    },
+    chartData() {
+      // Prepare data for chart, add week label field
+      return this.filteredData.map(row => ({
+        ...row,
+        週ラベル: `${row.年}年第${row.週}週`
+      }))
+    },
+    nationalChartData() {
+      // National trend chart data: only use total
+      return this.data
+        .filter(row => {
+          if (row.都道府県 !== '総数') return false
+          if (this.filters.year && row.年 !== this.filters.year) return false
+          if (this.filters.week && row.週 !== this.filters.week) return false
+          return true
+        })
+        .map(row => ({
+          ...row,
+          週ラベル: `${row.年}年第${row.週}週`
+        }))
+        .sort((a, b) => {
+          if (a.年 !== b.年) return a.年 - b.年
+          return a.週 - b.週
+        })
+    },
+    prefectureComparisonData() {
+      // Prefecture comparison data: filter from raw data, apply year and week filters, but don't restrict prefecture
+      const filtered = this.data.filter(row => {
+        if (this.filters.year && row.年 !== this.filters.year) return false
+        if (this.filters.week && row.週 !== this.filters.week) return false
+        if (row.都道府県 === '総数') return false // Exclude total
+        return true
+      })
+      return filtered.sort((a, b) => {
+        if (a.年 !== b.年) return b.年 - a.年
+        return b.週 - a.週
+      })
+    },
+    hasCumulativeData() {
+      if (!this.selectedDisease) return false
+      const field = `${this.selectedDisease}_累積`
+      return this.nationalChartData.some(row => row[field] != null && row[field] !== '' && row[field] !== 0)
+    },
+    chartSeries() {
+      if (!this.selectedDisease) return []
+      const series = [
+        { field: `${this.selectedDisease}_報告`, name: '報告数', color: '#0071e3' }
+      ]
+      // Add cumulative series if data exists
+      if (this.hasCumulativeData) {
+        series.push({ field: `${this.selectedDisease}_累積`, name: '累積報告数', color: '#34c759' })
+      }
+      return series
     }
   },
   watch: {
@@ -267,5 +407,68 @@ export default {
   color: #6e6e73;
   font-size: 14px;
   letter-spacing: -0.01em;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0;
+  justify-content: center;
+}
+
+.view-toggle button {
+  padding: 10px 24px;
+  border: 1px solid #d2d2d7;
+  background: #fff;
+  border-radius: 980px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.28, 0.11, 0.32, 1);
+  color: #1d1d1f;
+}
+
+.view-toggle button:hover {
+  border-color: #0071e3;
+  color: #0071e3;
+}
+
+.view-toggle button.active {
+  background: #0071e3;
+  color: #fff;
+  border-color: #0071e3;
+}
+
+.chart-view {
+  margin-top: 32px;
+}
+
+.chart-section {
+  margin-bottom: 48px;
+  padding: 24px;
+  background: #fafafa;
+  border-radius: 12px;
+}
+
+.chart-section h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+
+.no-disease-selected {
+  margin: 48px 0;
+  padding: 32px;
+  text-align: center;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.no-disease-selected p {
+  font-size: 16px;
+  color: #6e6e73;
+  margin: 0;
 }
 </style>
