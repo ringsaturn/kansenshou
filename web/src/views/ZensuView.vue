@@ -277,8 +277,10 @@ export default {
       })
       // Sort by year and week in descending order (newest first)
       return filtered.sort((a, b) => {
-        if (a.年 !== b.年) return b.年 - a.年
-        return b.週 - a.週
+        const yearA = parseInt(a.年)
+        const yearB = parseInt(b.年)
+        if (yearA !== yearB) return yearB - yearA
+        return parseInt(b.週) - parseInt(a.週)
       })
     },
     totalPages() {
@@ -298,6 +300,7 @@ export default {
     },
     nationalChartData() {
       // National trend chart data: only use total
+      // Sort in descending order (newest first) because TimeSeriesChart will reverse it
       return this.data
         .filter(row => {
           if (row.都道府県 !== '総数') return false
@@ -310,8 +313,11 @@ export default {
           週ラベル: `${row.年}年第${row.週}週`
         }))
         .sort((a, b) => {
-          if (a.年 !== b.年) return a.年 - b.年
-          return a.週 - b.週
+          // Ensure numeric comparison for year and week - descending order
+          const yearA = parseInt(a.年)
+          const yearB = parseInt(b.年)
+          if (yearA !== yearB) return yearB - yearA
+          return parseInt(b.週) - parseInt(a.週)
         })
     },
     prefectureComparisonData() {
@@ -323,8 +329,10 @@ export default {
         return true
       })
       return filtered.sort((a, b) => {
-        if (a.年 !== b.年) return b.年 - a.年
-        return b.週 - a.週
+        const yearA = parseInt(a.年)
+        const yearB = parseInt(b.年)
+        if (yearA !== yearB) return yearB - yearA
+        return parseInt(b.週) - parseInt(a.週)
       })
     },
     hasCumulativeData() {
