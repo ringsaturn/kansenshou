@@ -28,6 +28,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download Parquet artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: parquet-data
+          path: data/
+        continue-on-error: true
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
@@ -39,6 +46,15 @@ jobs:
         run: |
           cd web
           make copy-data
+          
+      - name: Copy Parquet files to public folder
+        run: |
+          mkdir -p web/public/data/ari web/public/data/teiten web/public/data/zensu web/public/data/trend
+          cp -f data/zensu/merged_zensu.parquet web/public/data/zensu/ || true
+          cp -f data/ari/merged_ari.parquet web/public/data/ari/ || true
+          cp -f data/teiten/merged_teiten.parquet web/public/data/teiten/ || true
+          cp -f data/trend/merged_trend.parquet web/public/data/trend/ || true
+          echo "Parquet files copied to public folder"
 
       - name: Build website
         working-directory: web
