@@ -6,7 +6,9 @@ from pathlib import Path
 import pandas as pd
 
 
-def download_csv(year: int, week: int, output_dir: Path, data_type: str = "zensu") -> Path | None:
+def download_csv(
+    year: int, week: int, output_dir: Path, data_type: str = "zensu"
+) -> Path | None:
     """
     Download CSV file for specified year and week
 
@@ -20,10 +22,17 @@ def download_csv(year: int, week: int, output_dir: Path, data_type: str = "zensu
         Path to downloaded file, or None if failed
     """
     # Build URL based on year and data type
-    output_file = output_dir / f"{year}-{week:02d}-{data_type if data_type != 'trend' else 'trend'}.csv"
-    
+    output_file = (
+        output_dir
+        / f"{year}-{week:02d}-{data_type if data_type != 'trend' else 'trend'}.csv"
+    )
+
     # 2012W37 to 2022W52: Old format using /niid/images/idwr/sokuho/
-    if (year == 2012 and week >= 37) or (2013 <= year <= 2022) or (year == 2023 and week <= 1):
+    if (
+        (year == 2012 and week >= 37)
+        or (2013 <= year <= 2022)
+        or (year == 2023 and week <= 1)
+    ):
         year_week_folder = f"{year}{week:02d}"
         if data_type == "trend":
             url = f"https://id-info.jihs.go.jp/niid/images/idwr/sokuho/idwr-{year}/{year_week_folder}/week{week:02d}-trend.csv"
@@ -79,30 +88,38 @@ def clean_csv(input_file: Path, output_file: Path, data_type: str = "zensu") -> 
         # trend data has special format, parse wide table and reorganize into clear wide table format
         if data_type == "trend":
             df = pd.read_csv(input_file, encoding="shift_jis", header=None)
-            
+
             # Extract year and week from filename
             filename_parts = input_file.stem.split("-")
             report_year = filename_parts[0]
             report_week = filename_parts[1]
-            
+
             result_rows = []
             current_disease = None
             week_columns = []
-            
+
             for idx in range(len(df)):
                 row = df.iloc[idx]
                 first_col = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ""
-                
+
                 # Skip leading comments and empty lines
-                if not first_col or first_col.startswith("注") or first_col.startswith("疾病"):
+                if (
+                    not first_col
+                    or first_col.startswith("注")
+                    or first_col.startswith("疾病")
+                ):
                     continue
-                
+
                 # Detect year range row (e.g., "2013年〜2023年")
                 if "年〜" in first_col or "年～" in first_col:
                     continue
-                
+
                 # Detect disease name row (standalone row without year)
-                if first_col and not first_col.endswith("年") and "週" not in str(row.iloc[1]):
+                if (
+                    first_col
+                    and not first_col.endswith("年")
+                    and "週" not in str(row.iloc[1])
+                ):
                     # Check if next row is week header
                     if idx + 1 < len(df):
                         next_row = df.iloc[idx + 1]
@@ -116,35 +133,41 @@ def clean_csv(input_file: Path, output_file: Path, data_type: str = "zensu") -> 
                                     week_num = str(col_val).replace("週", "").strip()
                                     week_columns.append((col_idx, week_num))
                     continue
-                
+
                 # Process data row (year + data)
                 if first_col.endswith("年") and current_disease and week_columns:
                     year_str = first_col.replace("年", "").strip()
                     # Convert year format (e.g., "23年" -> "2023")
                     if len(year_str) == 2:
-                        year = "20" + year_str if int(year_str) < 50 else "19" + year_str
+                        year = (
+                            "20" + year_str if int(year_str) < 50 else "19" + year_str
+                        )
                     else:
                         year = year_str
-                    
+
                     # Build data for this row
                     row_data = {
                         "報告年": report_year,
                         "報告週": report_week,
                         "疾病": current_disease,
-                        "年": year
+                        "年": year,
                     }
-                    
+
                     # Add weekly values
                     for col_idx, week_num in week_columns:
                         if col_idx < len(row):
                             value = row.iloc[col_idx]
-                            if pd.notna(value) and str(value).strip() and str(value) != "-":
+                            if (
+                                pd.notna(value)
+                                and str(value).strip()
+                                and str(value) != "-"
+                            ):
                                 row_data[f"{week_num}週"] = str(value).strip()
                             else:
                                 row_data[f"{week_num}週"] = ""
-                    
+
                     result_rows.append(row_data)
-            
+
             # Convert to DataFrame and save
             if result_rows:
                 result_df = pd.DataFrame(result_rows)
@@ -154,7 +177,7 @@ def clean_csv(input_file: Path, output_file: Path, data_type: str = "zensu") -> 
                 result_df = pd.DataFrame(columns=["報告年", "報告週", "疾病", "年"])
                 result_df.to_csv(output_file, index=False, encoding="utf-8")
             return True
-        
+
         # Read raw CSV file (Shift-JIS encoding)
         df = pd.read_csv(input_file, encoding="shift_jis", header=None)
 
@@ -207,7 +230,9 @@ def clean_csv(input_file: Path, output_file: Path, data_type: str = "zensu") -> 
         return False
 
 
-def download_and_process_all(start_year: int = 2023, data_type: str = "zensu", start_week: int = 1):
+def download_and_process_all(
+    start_year: int = 2023, data_type: str = "zensu", start_week: int = 1
+):
     """
     Download and process all data starting from specified year
 
@@ -229,7 +254,9 @@ def download_and_process_all(start_year: int = 2023, data_type: str = "zensu", s
     total_processed = 0
     total_failed = 0
 
-    print(f"Starting to download {data_type.upper()} data from {start_year}W{start_week:02d} to present...\n")
+    print(
+        f"Starting to download {data_type.upper()} data from {start_year}W{start_week:02d} to present...\n"
+    )
 
     for year in range(start_year, current_year + 1):
         # Determine starting week and max week for this year
@@ -246,7 +273,9 @@ def download_and_process_all(start_year: int = 2023, data_type: str = "zensu", s
                 total_downloaded += 1
 
                 # Process file
-                processed_file = processed_dir / f"{year}-{week:02d}-{data_type}-clean.csv"
+                processed_file = (
+                    processed_dir / f"{year}-{week:02d}-{data_type}-clean.csv"
+                )
 
                 if processed_file.exists():
                     print(f"  Processed file already exists: {processed_file.name}")
@@ -276,11 +305,11 @@ def download_and_process_all(start_year: int = 2023, data_type: str = "zensu", s
 def get_week_dates(year: int, week: int) -> tuple[str, str, int]:
     """
     Calculate start and end dates based on ISO week
-    
+
     Args:
         year: Year
         week: ISO week number
-    
+
     Returns:
         Tuple of (start_date, end_date, month)
     """
@@ -288,92 +317,113 @@ def get_week_dates(year: int, week: int) -> tuple[str, str, int]:
     # Find Monday of week 1 of the year
     jan_4 = datetime(year, 1, 4)  # ISO 8601: week containing Jan 4 is week 1
     week_1_monday = jan_4 - timedelta(days=jan_4.weekday())
-    
+
     # Calculate Monday of target week
     target_monday = week_1_monday + timedelta(weeks=week - 1)
     # Calculate Sunday
     target_sunday = target_monday + timedelta(days=6)
-    
+
     start_date = target_monday.strftime("%Y-%m-%d")
     end_date = target_sunday.strftime("%Y-%m-%d")
     month = target_monday.month
-    
+
     return start_date, end_date, month
 
 
 def merge_all_csv(data_type: str = "zensu"):
     """
     Merge all processed CSV files and add complete date information
-    
+
     Args:
         data_type: Data type, "zensu", "ari", "teiten" or "trend"
     """
     processed_dir = Path(f"data/{data_type}/processed")
-    output_file = Path(f"data/{data_type}/merged_{data_type}.csv")
-    
+    output_csv = Path(f"data/{data_type}/merged_{data_type}.csv")
+    output_parquet = Path(f"data/{data_type}/merged_{data_type}.parquet")
+
     print("\n" + "=" * 60)
     print(f"Starting to merge all {data_type.upper()} CSV files...")
     print("=" * 60)
-    
+
     # Get all processed CSV files
     csv_files = sorted(processed_dir.glob(f"*-{data_type}-clean.csv"))
-    
+
     if not csv_files:
         print("❌ No processed CSV files found!")
         return
-    
+
     print(f"📁 Found {len(csv_files)} files")
-    
+
     all_data = []
-    
+
     for csv_file in csv_files:
         # Extract year and week from filename
         filename = csv_file.stem  # e.g.: "2023-01-zensu-clean"
         parts = filename.split("-")
         year = int(parts[0])
         week = int(parts[1])
-        
+
         # Read CSV
         try:
             df = pd.read_csv(csv_file)
-            
+
             # Calculate date information
             start_date, end_date, month = get_week_dates(year, week)
-            
+
             # Add date columns (if not exist)
             if "年" not in df.columns:
                 df.insert(0, "年", year)
             if "週" not in df.columns:
                 df.insert(1, "週", week)
-            
+
             # Add new date columns
             df.insert(2, "月", month)
             df.insert(3, "開始日", start_date)
             df.insert(4, "終了日", end_date)
-            
+
             all_data.append(df)
-            
+
         except Exception as e:
             print(f"  ✗ Failed to read file {csv_file.name}: {e}")
             continue
-    
+
     if not all_data:
         print("❌ No data was successfully read!")
         return
-    
+
     # Merge all data
     print(f"\n📊 Merging {len(all_data)} datasets...")
     merged_df = pd.concat(all_data, ignore_index=True)
-    
-    # Save merged file
-    merged_df.to_csv(output_file, index=False, encoding="utf-8")
-    
+
+    # Save merged CSV file
+    merged_df.to_csv(output_csv, index=False, encoding="utf-8")
+
+    # Save merged Parquet file
+    print("💾 Saving Parquet file...")
+    try:
+        merged_df.to_parquet(
+            output_parquet, index=False, engine="pyarrow", compression="snappy"
+        )
+        parquet_size = output_parquet.stat().st_size / 1024 / 1024
+        print(f"  ✓ Parquet file saved: {output_parquet}")
+        print(f"  ✓ Parquet size: {parquet_size:.2f} MB")
+    except Exception as e:
+        print(f"  ✗ Failed to save Parquet file: {e}")
+        print("  ℹ️  You may need to install pyarrow: pip install pyarrow")
+
     print("\n" + "=" * 60)
     print("✅ Merge completed!")
     print(f"  - Total rows: {len(merged_df):,}")
     print(f"  - Total columns: {len(merged_df.columns)}")
-    print(f"  - Output file: {output_file}")
-    print(f"  - File size: {output_file.stat().st_size / 1024 / 1024:.2f} MB")
+    print(f"  - CSV output: {output_csv}")
+    print(f"  - CSV size: {output_csv.stat().st_size / 1024 / 1024:.2f} MB")
+    if output_parquet.exists():
+        print(f"  - Parquet output: {output_parquet}")
+        print(f"  - Parquet size: {output_parquet.stat().st_size / 1024 / 1024:.2f} MB")
+        csv_size = output_csv.stat().st_size / 1024 / 1024
+        parquet_size = output_parquet.stat().st_size / 1024 / 1024
+        compression_ratio = (1 - parquet_size / csv_size) * 100
+        print(f"  - Compression: {compression_ratio:.1f}% smaller")
     print("\nFirst 8 columns:")
     for col in merged_df.columns[:8]:
         print(f"  - {col}")
@@ -382,11 +432,11 @@ def merge_all_csv(data_type: str = "zensu"):
 
 if __name__ == "__main__":
     import sys
-    
+
     # Parse command line arguments
     command = sys.argv[1] if len(sys.argv) > 1 else None
     data_type = sys.argv[2] if len(sys.argv) > 2 else "both"
-    
+
     if command == "merge":
         # Only execute merge operation
         if data_type == "both":
@@ -402,33 +452,35 @@ if __name__ == "__main__":
             download_and_process_all(start_year=2012, start_week=37, data_type="zensu")
             download_and_process_all(start_year=2012, start_week=37, data_type="teiten")
             download_and_process_all(start_year=2012, start_week=37, data_type="trend")
-            download_and_process_all(start_year=2023, data_type="ari")
+            download_and_process_all(start_year=2025, start_week=15, data_type="ari")
         else:
-            start_year = 2012 if data_type in ["zensu", "teiten", "trend"] else 2023
-            start_week = 37 if data_type in ["zensu", "teiten", "trend"] else 1
-            download_and_process_all(start_year=start_year, start_week=start_week, data_type=data_type)
+            start_year = 2012 if data_type in ["zensu", "teiten", "trend"] else 2025
+            start_week = 37 if data_type in ["zensu", "teiten", "trend"] else 15
+            download_and_process_all(
+                start_year=start_year, start_week=start_week, data_type=data_type
+            )
     else:
         # Default: download and merge all data
         print("=" * 60)
         print("Download and process all data types")
         print("=" * 60)
-        
+
         # Download zensu data (from 2012W37)
         download_and_process_all(start_year=2012, start_week=37, data_type="zensu")
         merge_all_csv("zensu")
-        
+
         # Download teiten data (from 2012W37)
         download_and_process_all(start_year=2012, start_week=37, data_type="teiten")
         merge_all_csv("teiten")
-        
+
         # Download trend data (from 2012W37)
         download_and_process_all(start_year=2012, start_week=37, data_type="trend")
         merge_all_csv("trend")
-        
-        # Download ari data (from 2023, as ari might not exist in older format)
-        download_and_process_all(start_year=2023, data_type="ari")
+
+        # Download ari data (from 2025W15)
+        download_and_process_all(start_year=2025, start_week=15, data_type="ari")
         merge_all_csv("ari")
-        
+
         print("\n" + "=" * 60)
         print("✅ All data processing completed!")
         print("=" * 60)
