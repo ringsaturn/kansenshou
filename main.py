@@ -19,27 +19,33 @@ def download_csv(year: int, week: int, output_dir: Path, data_type: str = "zensu
     Returns:
         Path to downloaded file, or None if failed
     """
-    # Build URL
-    # trend data uses special filename format: week{week:02d}-trend.csv
-    # zensu path changed starting 2025 week 12 to /jp/rapid/
-    if data_type == "trend":
+    # Build URL based on year and data type
+    output_file = output_dir / f"{year}-{week:02d}-{data_type if data_type != 'trend' else 'trend'}.csv"
+    
+    # 2012W37 to 2022W52: Old format using /niid/images/idwr/sokuho/
+    if (year == 2012 and week >= 37) or (2013 <= year <= 2022) or (year == 2023 and week <= 1):
+        year_week_folder = f"{year}{week:02d}"
+        if data_type == "trend":
+            url = f"https://id-info.jihs.go.jp/niid/images/idwr/sokuho/idwr-{year}/{year_week_folder}/week{week:02d}-trend.csv"
+        elif data_type in ["zensu", "teiten"]:
+            url = f"https://id-info.jihs.go.jp/niid/images/idwr/sokuho/idwr-{year}/{year_week_folder}/{year}-{week:02d}-{data_type}.csv"
+        else:  # ari - may not exist in old format, but use consistent pattern
+            url = f"https://id-info.jihs.go.jp/niid/images/idwr/sokuho/idwr-{year}/{year_week_folder}/{year}-{week:02d}-{data_type}.csv"
+    # 2023 onwards (from around week 2): New format using /surveillance/idwr/rapid/
+    elif data_type == "trend":
         if year >= 2025 and week >= 11:
             url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/week{week:02d}-trend.csv"
         else:
             url = f"https://id-info.jihs.go.jp/surveillance/idwr/rapid/{year}/{week}/week{week:02d}-trend.csv"
-        output_file = output_dir / f"{year}-{week:02d}-trend.csv"
     # Starting from 2025, teiten data path changed to /jp/rapid/
     # ari data always uses /jp/rapid/
     # zensu data path changed to /jp/rapid/ from 2025 week 12 onwards
     elif data_type == "zensu" and (year > 2025 or (year == 2025 and week >= 12)):
         url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
-        output_file = output_dir / f"{year}-{week:02d}-{data_type}.csv"
     elif data_type == "ari" or (data_type == "teiten" and year >= 2025):
         url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
-        output_file = output_dir / f"{year}-{week:02d}-{data_type}.csv"
     else:
         url = f"https://id-info.jihs.go.jp/surveillance/idwr/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
-        output_file = output_dir / f"{year}-{week:02d}-{data_type}.csv"
 
     # Skip download if file already exists
     if output_file.exists():
@@ -201,13 +207,14 @@ def clean_csv(input_file: Path, output_file: Path, data_type: str = "zensu") -> 
         return False
 
 
-def download_and_process_all(start_year: int = 2023, data_type: str = "zensu"):
+def download_and_process_all(start_year: int = 2023, data_type: str = "zensu", start_week: int = 1):
     """
     Download and process all data starting from specified year
 
     Args:
         start_year: Starting year (default 2023)
         data_type: Data type, "zensu", "ari", "teiten" or "trend"
+        start_week: Starting week for start_year (default 1)
     """
     current_year = datetime.now().year
     current_week = datetime.now().isocalendar()[1]
@@ -222,15 +229,16 @@ def download_and_process_all(start_year: int = 2023, data_type: str = "zensu"):
     total_processed = 0
     total_failed = 0
 
-    print(f"Starting to download {data_type.upper()} data from {start_year} to present...\n")
+    print(f"Starting to download {data_type.upper()} data from {start_year}W{start_week:02d} to present...\n")
 
     for year in range(start_year, current_year + 1):
-        # Determine max week to download for this year
+        # Determine starting week and max week for this year
+        min_week = start_week if year == start_year else 1
         max_week = current_week if year == current_year else 52
 
-        print(f"📅 {year} (Week 1-{max_week})")
+        print(f"📅 {year} (Week {min_week}-{max_week})")
 
-        for week in range(1, max_week + 1):
+        for week in range(min_week, max_week + 1):
             # Download raw file
             raw_file = download_csv(year, week, raw_dir, data_type)
 
@@ -391,33 +399,35 @@ if __name__ == "__main__":
     elif command == "download":
         # Only download, don't merge
         if data_type == "both":
-            download_and_process_all(start_year=2023, data_type="zensu")
+            download_and_process_all(start_year=2012, start_week=37, data_type="zensu")
+            download_and_process_all(start_year=2012, start_week=37, data_type="teiten")
+            download_and_process_all(start_year=2012, start_week=37, data_type="trend")
             download_and_process_all(start_year=2023, data_type="ari")
-            download_and_process_all(start_year=2023, data_type="teiten")
-            download_and_process_all(start_year=2023, data_type="trend")
         else:
-            download_and_process_all(start_year=2023, data_type=data_type)
+            start_year = 2012 if data_type in ["zensu", "teiten", "trend"] else 2023
+            start_week = 37 if data_type in ["zensu", "teiten", "trend"] else 1
+            download_and_process_all(start_year=start_year, start_week=start_week, data_type=data_type)
     else:
         # Default: download and merge all data
         print("=" * 60)
         print("Download and process all data types")
         print("=" * 60)
         
-        # Download zensu data
-        download_and_process_all(start_year=2023, data_type="zensu")
+        # Download zensu data (from 2012W37)
+        download_and_process_all(start_year=2012, start_week=37, data_type="zensu")
         merge_all_csv("zensu")
         
-        # Download ari data
-        download_and_process_all(start_year=2023, data_type="ari")
-        merge_all_csv("ari")
-        
-        # Download teiten data
-        download_and_process_all(start_year=2023, data_type="teiten")
+        # Download teiten data (from 2012W37)
+        download_and_process_all(start_year=2012, start_week=37, data_type="teiten")
         merge_all_csv("teiten")
         
-        # Download trend data
-        download_and_process_all(start_year=2023, data_type="trend")
+        # Download trend data (from 2012W37)
+        download_and_process_all(start_year=2012, start_week=37, data_type="trend")
         merge_all_csv("trend")
+        
+        # Download ari data (from 2023, as ari might not exist in older format)
+        download_and_process_all(start_year=2023, data_type="ari")
+        merge_all_csv("ari")
         
         print("\n" + "=" * 60)
         print("✅ All data processing completed!")
