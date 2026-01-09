@@ -309,7 +309,8 @@ def merge_all_csv(data_type: str = "zensu"):
         data_type: Data type, "zensu", "ari", "teiten" or "trend"
     """
     processed_dir = Path(f"data/{data_type}/processed")
-    output_file = Path(f"data/{data_type}/merged_{data_type}.csv")
+    output_csv = Path(f"data/{data_type}/merged_{data_type}.csv")
+    output_parquet = Path(f"data/{data_type}/merged_{data_type}.parquet")
     
     print("\n" + "=" * 60)
     print(f"Starting to merge all {data_type.upper()} CSV files...")
@@ -365,15 +366,33 @@ def merge_all_csv(data_type: str = "zensu"):
     print(f"\n📊 Merging {len(all_data)} datasets...")
     merged_df = pd.concat(all_data, ignore_index=True)
     
-    # Save merged file
-    merged_df.to_csv(output_file, index=False, encoding="utf-8")
+    # Save merged CSV file
+    merged_df.to_csv(output_csv, index=False, encoding="utf-8")
+    
+    # Save merged Parquet file
+    print("💾 Saving Parquet file...")
+    try:
+        merged_df.to_parquet(output_parquet, index=False, engine="pyarrow", compression="snappy")
+        parquet_size = output_parquet.stat().st_size / 1024 / 1024
+        print(f"  ✓ Parquet file saved: {output_parquet}")
+        print(f"  ✓ Parquet size: {parquet_size:.2f} MB")
+    except Exception as e:
+        print(f"  ✗ Failed to save Parquet file: {e}")
+        print("  ℹ️  You may need to install pyarrow: pip install pyarrow")
     
     print("\n" + "=" * 60)
     print("✅ Merge completed!")
     print(f"  - Total rows: {len(merged_df):,}")
     print(f"  - Total columns: {len(merged_df.columns)}")
-    print(f"  - Output file: {output_file}")
-    print(f"  - File size: {output_file.stat().st_size / 1024 / 1024:.2f} MB")
+    print(f"  - CSV output: {output_csv}")
+    print(f"  - CSV size: {output_csv.stat().st_size / 1024 / 1024:.2f} MB")
+    if output_parquet.exists():
+        print(f"  - Parquet output: {output_parquet}")
+        print(f"  - Parquet size: {output_parquet.stat().st_size / 1024 / 1024:.2f} MB")
+        csv_size = output_csv.stat().st_size / 1024 / 1024
+        parquet_size = output_parquet.stat().st_size / 1024 / 1024
+        compression_ratio = (1 - parquet_size / csv_size) * 100
+        print(f"  - Compression: {compression_ratio:.1f}% smaller")
     print("\nFirst 8 columns:")
     for col in merged_df.columns[:8]:
         print(f"  - {col}")
@@ -402,10 +421,10 @@ if __name__ == "__main__":
             download_and_process_all(start_year=2012, start_week=37, data_type="zensu")
             download_and_process_all(start_year=2012, start_week=37, data_type="teiten")
             download_and_process_all(start_year=2012, start_week=37, data_type="trend")
-            download_and_process_all(start_year=2023, data_type="ari")
+            download_and_process_all(start_year=2025, start_week=15, data_type="ari")
         else:
-            start_year = 2012 if data_type in ["zensu", "teiten", "trend"] else 2023
-            start_week = 37 if data_type in ["zensu", "teiten", "trend"] else 1
+            start_year = 2012 if data_type in ["zensu", "teiten", "trend"] else 2025
+            start_week = 37 if data_type in ["zensu", "teiten", "trend"] else 15
             download_and_process_all(start_year=start_year, start_week=start_week, data_type=data_type)
     else:
         # Default: download and merge all data
@@ -425,8 +444,8 @@ if __name__ == "__main__":
         download_and_process_all(start_year=2012, start_week=37, data_type="trend")
         merge_all_csv("trend")
         
-        # Download ari data (from 2023, as ari might not exist in older format)
-        download_and_process_all(start_year=2023, data_type="ari")
+        # Download ari data (from 2025W15)
+        download_and_process_all(start_year=2025, start_week=15, data_type="ari")
         merge_all_csv("ari")
         
         print("\n" + "=" * 60)
