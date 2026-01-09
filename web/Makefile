@@ -1,13 +1,13 @@
 .PHONY: copy-data build clean dev install
 
 copy-data:
-	@echo "Copying data files..."
+	@echo "Copying and compressing data files..."
 	@mkdir -p public/data/ari public/data/teiten public/data/zensu public/data/trend
-	@cp ../data/ari/merged_ari.csv public/data/ari/
-	@cp ../data/teiten/merged_teiten.csv public/data/teiten/
-	@cp ../data/zensu/merged_zensu.csv public/data/zensu/
-	@cp ../data/trend/merged_trend.csv public/data/trend/
-	@echo "Data files copied successfully!"
+	@zip -j public/data/ari/merged_ari.zip ../data/ari/merged_ari.csv
+	@zip -j public/data/teiten/merged_teiten.zip ../data/teiten/merged_teiten.csv
+	@zip -j public/data/zensu/merged_zensu.zip ../data/zensu/merged_zensu.csv
+	@zip -j public/data/trend/merged_trend.zip ../data/trend/merged_trend.csv
+	@echo "Data files compressed and copied successfully!"
 
 install:
 	@echo "Installing dependencies..."

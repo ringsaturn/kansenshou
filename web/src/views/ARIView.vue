@@ -156,6 +156,7 @@
 
 <script>
 import { parseCSV } from '../utils/csvParser.js'
+import { loadCSVFromZip } from '../utils/zipLoader.js'
 import TimeSeriesChart from '../components/TimeSeriesChart.vue'
 import MultiSeriesChart from '../components/MultiSeriesChart.vue'
 import PrefectureComparisonChart from '../components/PrefectureComparisonChart.vue'
@@ -291,8 +292,7 @@ export default {
   methods: {
     async loadData() {
       try {
-        const response = await fetch('/data/ari/merged_ari.csv')
-        const csvText = await response.text()
+        const csvText = await loadCSVFromZip('/data/ari/merged_ari.zip')
         this.data = parseCSV(csvText)
         this.loading = false
       } catch (err) {

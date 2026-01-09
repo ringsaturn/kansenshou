@@ -47,6 +47,7 @@
 
 <script>
 import { parseCSV } from '../utils/csvParser.js'
+import { loadCSVFromZip } from '../utils/zipLoader.js'
 import HistoricalTrendChart from './HistoricalTrendChart.vue'
 
 export default {
@@ -212,8 +213,7 @@ export default {
           return
         }
 
-        const response = await fetch('/data/trend/merged_trend.csv')
-        const csvText = await response.text()
+        const csvText = await loadCSVFromZip('/data/trend/merged_trend.zip')
         const parsedData = parseCSV(csvText)
 
                 // Cache to global to avoid redundant loading
