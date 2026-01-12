@@ -38,8 +38,9 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: |
-          tree -L 2
+      - name: Check data
+        run: |
+          tree -L 3
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
