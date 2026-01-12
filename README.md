@@ -60,6 +60,26 @@ uv sync
 
 ## 使用方法
 
+### 統合済みデータのダウンロード
+
+処理済みの統合データを直接ダウンロードして利用できます：
+
+#### Zensu (総数)
+- Parquet: https://kansenshou.ringsaturn.me/data/zensu/merged_zensu.parquet
+- CSV (zip): https://kansenshou.ringsaturn.me/data/zensu/merged_zensu.zip
+
+#### Teiten (定点)
+- Parquet: https://kansenshou.ringsaturn.me/data/teiten/merged_teiten.parquet
+- CSV (zip): https://kansenshou.ringsaturn.me/data/teiten/merged_teiten.zip
+
+#### ARI (急性呼吸器感染症)
+- Parquet: https://kansenshou.ringsaturn.me/data/ari/merged_ari.parquet
+- CSV (zip): https://kansenshou.ringsaturn.me/data/ari/merged_ari.zip
+
+#### Trend (過去10年間トレンド)
+- Parquet: https://kansenshou.ringsaturn.me/data/trend/merged_trend.parquet
+- CSV (zip): https://kansenshou.ringsaturn.me/data/trend/merged_trend.zip
+
 ### データのダウンロードと処理
 
 ```bash
