@@ -29,11 +29,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Parquet artifacts
+        if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v7
         with:
           name: parquet-data
-          path: data/
-        continue-on-error: true
+          # The artifact preserves paths like `data/...`; download to repo root to avoid `data/data/...`
+          path: .
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
