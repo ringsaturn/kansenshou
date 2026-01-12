@@ -1,12 +1,6 @@
 name: Deploy to Cloudflare Pages
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "web/**"
-      - "data/**"
   workflow_run:
     workflows:
       - "Update Infectious Disease Data"
