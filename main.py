@@ -398,6 +398,23 @@ def merge_all_csv(data_type: str = "zensu"):
     # Save merged CSV file
     merged_df.to_csv(output_csv, index=False, encoding="utf-8")
 
+    # Clean data types for Parquet compatibility
+    # Normalize placeholders like '-'/blank to NA and coerce numeric columns
+    exclude_cols = ["年", "週", "月", "開始日", "終了日", "都道府県", "疾病"]
+    for col in merged_df.columns:
+        if col in exclude_cols:
+            continue
+        # Standardize placeholder values only for object-like columns
+        if merged_df[col].dtype == object:
+            # Trim whitespace
+            merged_df[col] = merged_df[col].astype(str).str.strip()
+            # Treat common placeholders as missing
+            merged_df[col].replace({"-": None, "": None, "―": None, "ー": None, "−": None}, inplace=True)
+            # Remove thousands separators if any
+            merged_df[col] = merged_df[col].str.replace(",", "", regex=False)
+        # Coerce to numeric (non-numeric values become NaN)
+        merged_df[col] = pd.to_numeric(merged_df[col], errors="coerce")
+
     # Save merged Parquet file
     print("💾 Saving Parquet file...")
     try:
