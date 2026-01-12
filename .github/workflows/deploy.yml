@@ -65,7 +65,7 @@ jobs:
 
       - name: Build website
         working-directory: web
-        run: make build
+        run: bun run build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

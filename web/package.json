@@ -4,10 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:query": "cd observable && observable preview",
-    "build": "vite build && bun run build:query",
-    "build:vue": "vite build",
-    "build:query": "cd observable && observable build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,7 +14,6 @@
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
-    "@observablehq/framework": "^1.13.3",
     "@vitejs/plugin-vue": "^5.2.4",
     "vite": "^5.4.21"
   }
