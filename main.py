@@ -447,6 +447,83 @@ def merge_all_csv(data_type: str = "zensu"):
     print("=" * 60)
 
 
+def update_readme_stats():
+    """Update README.md with current data statistics"""
+    print("\n" + "=" * 60)
+    print("📝 Updating README.md with current data statistics")
+    print("=" * 60)
+    
+    readme_path = Path("README.md")
+    if not readme_path.exists():
+        print("  ⚠️  README.md not found, skipping update")
+        return
+    
+    # Get statistics for each data type
+    stats = {}
+    for data_type in ["zensu", "teiten", "ari", "trend"]:
+        raw_dir = Path(f"data/{data_type}/raw")
+        if raw_dir.exists():
+            files = sorted(raw_dir.glob(f"*-{data_type}.csv"))
+            if files:
+                # Extract year and week from filenames
+                first_file = files[0].stem
+                last_file = files[-1].stem
+                
+                parts = first_file.split("-")
+                start_year, start_week = parts[0], parts[1]
+                
+                parts = last_file.split("-")
+                end_year, end_week = parts[0], parts[1]
+                
+                stats[data_type] = {
+                    "start": f"{start_year}年第{int(start_week)}週",
+                    "end": f"{end_year}年第{int(end_week)}週",
+                    "count": len(files),
+                }
+    
+    if not stats:
+        print("  ⚠️  No data files found, skipping README update")
+        return
+    
+    # Read current README
+    with open(readme_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # Update each section
+    for data_type, info in stats.items():
+        if data_type == "zensu":
+            section_num = "1"
+            section_name = "Zensu (総数)"
+        elif data_type == "teiten":
+            section_num = "2"
+            section_name = "Teiten (定点)"
+        elif data_type == "ari":
+            section_num = "3"
+            section_name = "ARI (急性呼吸器感染症)"
+        elif data_type == "trend":
+            section_num = "4"
+            section_name = "Trend (過去10年間トレンド)"
+        
+        # Use regex to find and replace the period and file count
+        import re
+        
+        # Pattern to match the section and update period and file count
+        pattern = rf"(### {section_num}\. {re.escape(section_name)}.*?\n.*?\n- 期間: ).*?(〜).*?\n(- ファイル数: ).*?(週分)"
+        replacement = rf"\g<1>{info['start']}\g<2>{info['end']}\n\g<3>{info['count']}週分"
+        
+        content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+    
+    # Write updated README
+    with open(readme_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    
+    print("  ✓ README.md updated successfully")
+    print("\n  Updated statistics:")
+    for data_type, info in stats.items():
+        print(f"    {data_type.upper()}: {info['start']}〜{info['end']} ({info['count']}週分)")
+    print("=" * 60)
+
+
 if __name__ == "__main__":
     import sys
 
@@ -454,7 +531,10 @@ if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else None
     data_type = sys.argv[2] if len(sys.argv) > 2 else "both"
 
-    if command == "merge":
+    if command == "update-readme":
+        # Only update README statistics
+        update_readme_stats()
+    elif command == "merge":
         # Only execute merge operation
         if data_type == "both":
             merge_all_csv("zensu")
@@ -463,6 +543,8 @@ if __name__ == "__main__":
             merge_all_csv("trend")
         else:
             merge_all_csv(data_type)
+        # Update README after merging
+        update_readme_stats()
     elif command == "download":
         # Only download, don't merge
         if data_type == "both":
@@ -476,6 +558,8 @@ if __name__ == "__main__":
             download_and_process_all(
                 start_year=start_year, start_week=start_week, data_type=data_type
             )
+        # Update README after downloading
+        update_readme_stats()
     else:
         # Default: download and merge all data
         print("=" * 60)
@@ -497,6 +581,9 @@ if __name__ == "__main__":
         # Download ari data (from 2025W15)
         download_and_process_all(start_year=2025, start_week=15, data_type="ari")
         merge_all_csv("ari")
+
+        # Update README with current statistics
+        update_readme_stats()
 
         print("\n" + "=" * 60)
         print("✅ All data processing completed!")
