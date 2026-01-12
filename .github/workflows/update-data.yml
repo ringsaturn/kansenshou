@@ -39,24 +39,3 @@ jobs:
           git add README.md
           git commit -m "chore: update infectious disease data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           git push
-      
-      - name: No changes detected (auto mode)
-        if: steps.check_changes.outputs.has_changes != 'true' && github.event_name != 'workflow_dispatch'
-        run: |
-          echo "No new data changes detected in scheduled run"
-      
-      - name: Manual run - no changes but success
-        if: steps.check_changes.outputs.has_changes != 'true' && github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Manual run: No new data changes detected, but workflow succeeds to trigger deployment"
-      
-      - name: Upload Parquet files as artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: parquet-data
-          path: |
-            data/zensu/merged_zensu.parquet
-            data/ari/merged_ari.parquet
-            data/teiten/merged_teiten.parquet
-            data/trend/merged_trend.parquet
-          retention-days: 3
