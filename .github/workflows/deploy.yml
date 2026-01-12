@@ -33,8 +33,8 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: parquet-data
-          # The artifact preserves paths like `data/...`; download to repo root to avoid `data/data/...`
-          path: .
+          # Artifact contains zensu/, ari/, etc. (without data/ prefix); download to data/ to match cp paths
+          path: data
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
