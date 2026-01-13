@@ -447,6 +447,63 @@ def merge_all_csv(data_type: str = "zensu"):
     print("=" * 60)
 
 
+def generate_release_notes(output_path: Path = Path('RELEASE_NOTES.md')) -> dict:
+    """
+    Generate release notes with statistics from merged data files
+
+    Returns:
+        Dictionary with statistics for template substitution
+    """
+    import os
+    from datetime import datetime
+
+    stats = {}
+    total_records = 0
+
+    for dtype in ['zensu', 'teiten', 'trend', 'ari']:
+        csv_path = Path(f'data/{dtype}/merged_{dtype}.csv')
+        parquet_path = Path(f'data/{dtype}/merged_{dtype}.parquet')
+
+        if csv_path.exists():
+            df = pd.read_csv(csv_path)
+            records = len(df)
+            total_records += records
+
+            # Get latest week
+            if dtype != 'trend':
+                latest = df.iloc[-1]
+                latest_week = f"{int(latest['年'])}W{int(latest['週']):02d}"
+            else:
+                latest = df.iloc[-1]
+                latest_week = f"{int(latest['報告年'])}W{int(latest['報告週']):02d}"
+
+            # Get file sizes
+            csv_size = os.path.getsize(csv_path) / (1024 * 1024)  # MB
+            parquet_size = os.path.getsize(parquet_path) / (1024 * 1024) if parquet_path.exists() else 0
+
+            stats[dtype] = {
+                'records': records,
+                'latest_week': latest_week,
+                'csv_size': f"{csv_size:.1f} MB",
+                'parquet_size': f"{parquet_size:.1f} MB" if parquet_size > 0 else "N/A"
+            }
+
+    # Calculate totals
+    total_csv_size = sum([os.path.getsize(f'data/{dt}/merged_{dt}.csv') for dt in ['zensu', 'teiten', 'trend', 'ari'] if Path(f'data/{dt}/merged_{dt}.csv').exists()]) / (1024 * 1024)
+    total_parquet_size = sum([os.path.getsize(f'data/{dt}/merged_{dt}.parquet') for dt in ['zensu', 'teiten', 'trend', 'ari'] if Path(f'data/{dt}/merged_{dt}.parquet').exists()]) / (1024 * 1024)
+
+    stats['summary'] = {
+        'total_records': total_records,
+        'total_csv_size': f"{total_csv_size:.1f} MB",
+        'total_parquet_size': f"{total_parquet_size:.1f} MB",
+        'total_size': f"{total_csv_size + total_parquet_size:.1f} MB",
+        'update_date': datetime.now().strftime('%Y-%m-%d'),
+        'latest_week': stats.get('teiten', {}).get('latest_week', 'N/A')  # Use teiten as reference
+    }
+
+    return stats
+
+
 def update_readme_stats():
     """Update README.md with current data statistics"""
     print("\n" + "=" * 60)
