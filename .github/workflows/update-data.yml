@@ -32,6 +32,11 @@ jobs:
         run: |
           uv run python main.py
 
+      - name: Build Parquet files when skip_update is true
+        if: ${{ inputs.skip_update }}
+        run: |
+          uv run python main.py merge
+
       - name: Check for changes
         id: check_changes
         run: |
