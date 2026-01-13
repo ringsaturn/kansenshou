@@ -233,7 +233,7 @@ jobs:
           df <- read_parquet('merged_teiten.parquet')
           \`\`\`
 
-          **Web Visualization**: https://kansenshou.pages.dev
+          **Web Visualization**: https://kansenshou.ringsaturn.me
 
           ### ⚖️ ライセンス / License
 
