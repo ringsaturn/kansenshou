@@ -409,7 +409,9 @@ def merge_all_csv(data_type: str = "zensu"):
             # Trim whitespace
             merged_df[col] = merged_df[col].astype(str).str.strip()
             # Treat common placeholders as missing
-            merged_df[col].replace({"-": None, "": None, "―": None, "ー": None, "−": None}, inplace=True)
+            merged_df[col].replace(
+                {"-": None, "": None, "―": None, "ー": None, "−": None}, inplace=True
+            )
             # Remove thousands separators if any
             merged_df[col] = merged_df[col].str.replace(",", "", regex=False)
         # Coerce to numeric (non-numeric values become NaN)
@@ -447,7 +449,7 @@ def merge_all_csv(data_type: str = "zensu"):
     print("=" * 60)
 
 
-def generate_release_notes(output_path: Path = Path('RELEASE_NOTES.md')) -> dict:
+def generate_release_notes(output_path: Path = Path("RELEASE_NOTES.md")) -> dict:
     """
     Generate release notes with statistics from merged data files
 
@@ -460,9 +462,9 @@ def generate_release_notes(output_path: Path = Path('RELEASE_NOTES.md')) -> dict
     stats = {}
     total_records = 0
 
-    for dtype in ['zensu', 'teiten', 'trend', 'ari']:
-        csv_path = Path(f'data/{dtype}/merged_{dtype}.csv')
-        parquet_path = Path(f'data/{dtype}/merged_{dtype}.parquet')
+    for dtype in ["zensu", "teiten", "trend", "ari"]:
+        csv_path = Path(f"data/{dtype}/merged_{dtype}.csv")
+        parquet_path = Path(f"data/{dtype}/merged_{dtype}.parquet")
 
         if csv_path.exists():
             df = pd.read_csv(csv_path)
@@ -470,7 +472,7 @@ def generate_release_notes(output_path: Path = Path('RELEASE_NOTES.md')) -> dict
             total_records += records
 
             # Get latest week
-            if dtype != 'trend':
+            if dtype != "trend":
                 latest = df.iloc[-1]
                 latest_week = f"{int(latest['年'])}W{int(latest['週']):02d}"
             else:
@@ -479,26 +481,44 @@ def generate_release_notes(output_path: Path = Path('RELEASE_NOTES.md')) -> dict
 
             # Get file sizes
             csv_size = os.path.getsize(csv_path) / (1024 * 1024)  # MB
-            parquet_size = os.path.getsize(parquet_path) / (1024 * 1024) if parquet_path.exists() else 0
+            parquet_size = (
+                os.path.getsize(parquet_path) / (1024 * 1024)
+                if parquet_path.exists()
+                else 0
+            )
 
             stats[dtype] = {
-                'records': records,
-                'latest_week': latest_week,
-                'csv_size': f"{csv_size:.1f} MB",
-                'parquet_size': f"{parquet_size:.1f} MB" if parquet_size > 0 else "N/A"
+                "records": records,
+                "latest_week": latest_week,
+                "csv_size": f"{csv_size:.1f} MB",
+                "parquet_size": f"{parquet_size:.1f} MB" if parquet_size > 0 else "N/A",
             }
 
     # Calculate totals
-    total_csv_size = sum([os.path.getsize(f'data/{dt}/merged_{dt}.csv') for dt in ['zensu', 'teiten', 'trend', 'ari'] if Path(f'data/{dt}/merged_{dt}.csv').exists()]) / (1024 * 1024)
-    total_parquet_size = sum([os.path.getsize(f'data/{dt}/merged_{dt}.parquet') for dt in ['zensu', 'teiten', 'trend', 'ari'] if Path(f'data/{dt}/merged_{dt}.parquet').exists()]) / (1024 * 1024)
+    total_csv_size = sum(
+        [
+            os.path.getsize(f"data/{dt}/merged_{dt}.csv")
+            for dt in ["zensu", "teiten", "trend", "ari"]
+            if Path(f"data/{dt}/merged_{dt}.csv").exists()
+        ]
+    ) / (1024 * 1024)
+    total_parquet_size = sum(
+        [
+            os.path.getsize(f"data/{dt}/merged_{dt}.parquet")
+            for dt in ["zensu", "teiten", "trend", "ari"]
+            if Path(f"data/{dt}/merged_{dt}.parquet").exists()
+        ]
+    ) / (1024 * 1024)
 
-    stats['summary'] = {
-        'total_records': total_records,
-        'total_csv_size': f"{total_csv_size:.1f} MB",
-        'total_parquet_size': f"{total_parquet_size:.1f} MB",
-        'total_size': f"{total_csv_size + total_parquet_size:.1f} MB",
-        'update_date': datetime.now().strftime('%Y-%m-%d'),
-        'latest_week': stats.get('teiten', {}).get('latest_week', 'N/A')  # Use teiten as reference
+    stats["summary"] = {
+        "total_records": total_records,
+        "total_csv_size": f"{total_csv_size:.1f} MB",
+        "total_parquet_size": f"{total_parquet_size:.1f} MB",
+        "total_size": f"{total_csv_size + total_parquet_size:.1f} MB",
+        "update_date": datetime.now().strftime("%Y-%m-%d"),
+        "latest_week": stats.get("teiten", {}).get(
+            "latest_week", "N/A"
+        ),  # Use teiten as reference
     }
 
     return stats
@@ -509,12 +529,12 @@ def update_readme_stats():
     print("\n" + "=" * 60)
     print("📝 Updating README.md with current data statistics")
     print("=" * 60)
-    
+
     readme_path = Path("README.md")
     if not readme_path.exists():
         print("  ⚠️  README.md not found, skipping update")
         return
-    
+
     # Get statistics for each data type
     stats = {}
     for data_type in ["zensu", "teiten", "ari", "trend"]:
@@ -525,27 +545,27 @@ def update_readme_stats():
                 # Extract year and week from filenames
                 first_file = files[0].stem
                 last_file = files[-1].stem
-                
+
                 parts = first_file.split("-")
                 start_year, start_week = parts[0], parts[1]
-                
+
                 parts = last_file.split("-")
                 end_year, end_week = parts[0], parts[1]
-                
+
                 stats[data_type] = {
                     "start": f"{start_year}年第{int(start_week)}週",
                     "end": f"{end_year}年第{int(end_week)}週",
                     "count": len(files),
                 }
-    
+
     if not stats:
         print("  ⚠️  No data files found, skipping README update")
         return
-    
+
     # Read current README
     with open(readme_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Update each section
     for data_type, info in stats.items():
         if data_type == "zensu":
@@ -560,24 +580,28 @@ def update_readme_stats():
         elif data_type == "trend":
             section_num = "4"
             section_name = "Trend (過去10年間トレンド)"
-        
+
         # Use regex to find and replace the period and file count
         import re
-        
+
         # Pattern to match the section and update period and file count
         pattern = rf"(### {section_num}\. {re.escape(section_name)}.*?\n.*?\n- 期間: ).*?(〜).*?\n(- ファイル数: ).*?(週分)"
-        replacement = rf"\g<1>{info['start']}\g<2>{info['end']}\n\g<3>{info['count']}週分"
-        
+        replacement = (
+            rf"\g<1>{info['start']}\g<2>{info['end']}\n\g<3>{info['count']}週分"
+        )
+
         content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-    
+
     # Write updated README
     with open(readme_path, "w", encoding="utf-8") as f:
         f.write(content)
-    
+
     print("  ✓ README.md updated successfully")
     print("\n  Updated statistics:")
     for data_type, info in stats.items():
-        print(f"    {data_type.upper()}: {info['start']}〜{info['end']} ({info['count']}週分)")
+        print(
+            f"    {data_type.upper()}: {info['start']}〜{info['end']} ({info['count']}週分)"
+        )
     print("=" * 60)
 
 
