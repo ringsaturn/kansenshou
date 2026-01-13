@@ -2,7 +2,7 @@ name: Update Infectious Disease Data
 
 on:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: "0 1 * * *"
   workflow_dispatch:
 
 permissions:
@@ -11,25 +11,25 @@ permissions:
 jobs:
   update-data:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Set up Python
         uses: astral-sh/setup-uv@v6
-      
+
       - name: Run data update script
         run: |
           uv run python main.py
-      
+
       - name: Check for changes
         id: check_changes
         run: |
           git diff --quiet data/ || echo "has_changes=true" >> $GITHUB_OUTPUT
-      
+
       - name: Commit and push changes
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
@@ -39,3 +39,208 @@ jobs:
           git add README.md
           git commit -m "chore: update infectious disease data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           git push
+
+      - name: Get latest data week
+        if: steps.check_changes.outputs.has_changes == 'true'
+        id: get_week
+        run: |
+          # Extract latest week from merged file
+          LATEST_WEEK=$(uv run python -c "
+          import pandas as pd
+          from pathlib import Path
+          if Path('data/teiten/merged_teiten.csv').exists():
+              df = pd.read_csv('data/teiten/merged_teiten.csv')
+              latest = df.iloc[-1]
+              year = int(latest['年'])
+              week = int(latest['週'])
+              print(f'{year}W{week:02d}')
+          else:
+              print('2026W01')
+          ")
+          echo "week=$LATEST_WEEK" >> $GITHUB_OUTPUT
+          echo "tag=data-$LATEST_WEEK" >> $GITHUB_OUTPUT
+          echo "Latest week: $LATEST_WEEK"
+
+      - name: Check if release exists
+        if: steps.check_changes.outputs.has_changes == 'true'
+        id: check_release
+        run: |
+          if gh release view ${{ steps.get_week.outputs.tag }} >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.get_week.outputs.tag }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.get_week.outputs.tag }} does not exist"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate release notes
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_release.outputs.exists == 'false'
+        run: |
+          uv run python -c "
+          from main import generate_release_notes
+          import json
+          stats = generate_release_notes()
+          print(json.dumps(stats, indent=2, ensure_ascii=False))
+          with open('release_stats.json', 'w', encoding='utf-8') as f:
+              json.dump(stats, f, ensure_ascii=False, indent=2)
+          "
+
+      - name: Create release archives
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_release.outputs.exists == 'false'
+        run: |
+          mkdir -p release_assets
+
+          WEEK="${{ steps.get_week.outputs.week }}"
+
+          # CSV package
+          echo "Creating CSV package..."
+          zip -j "release_assets/kansenshou-data-${WEEK}-csv.zip" \
+            data/zensu/merged_zensu.csv \
+            data/teiten/merged_teiten.csv \
+            data/trend/merged_trend.csv \
+            data/ari/merged_ari.csv
+
+          # Parquet package
+          echo "Creating Parquet package..."
+          zip -j "release_assets/kansenshou-data-${WEEK}-parquet.zip" \
+            data/zensu/merged_zensu.parquet \
+            data/teiten/merged_teiten.parquet \
+            data/trend/merged_trend.parquet \
+            data/ari/merged_ari.parquet
+
+          # Full package (CSV + Parquet)
+          echo "Creating full package..."
+          zip -j "release_assets/kansenshou-data-${WEEK}-full.zip" \
+            data/zensu/merged_zensu.csv \
+            data/zensu/merged_zensu.parquet \
+            data/teiten/merged_teiten.csv \
+            data/teiten/merged_teiten.parquet \
+            data/trend/merged_trend.csv \
+            data/trend/merged_trend.parquet \
+            data/ari/merged_ari.csv \
+            data/ari/merged_ari.parquet
+
+          # Generate checksums
+          echo "Generating checksums..."
+          cd release_assets
+          sha256sum *.zip > SHA256SUMS.txt
+          cd ..
+
+          # List created files
+          echo "Created files:"
+          ls -lh release_assets/
+
+      - name: Create release body
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_release.outputs.exists == 'false'
+        run: |
+          # Read stats from JSON
+          LATEST_WEEK="${{ steps.get_week.outputs.week }}"
+          UPDATE_DATE=$(date -u +'%Y-%m-%d')
+
+          # Get statistics from JSON
+          ZENSU_RECORDS=$(jq -r '.zensu.records' release_stats.json)
+          TEITEN_RECORDS=$(jq -r '.teiten.records' release_stats.json)
+          TREND_RECORDS=$(jq -r '.trend.records' release_stats.json)
+          ARI_RECORDS=$(jq -r '.ari.records' release_stats.json)
+
+          ZENSU_CSV_SIZE=$(jq -r '.zensu.csv_size' release_stats.json)
+          TEITEN_CSV_SIZE=$(jq -r '.teiten.csv_size' release_stats.json)
+          TREND_CSV_SIZE=$(jq -r '.trend.csv_size' release_stats.json)
+          ARI_CSV_SIZE=$(jq -r '.ari.csv_size' release_stats.json)
+
+          ZENSU_PARQUET_SIZE=$(jq -r '.zensu.parquet_size' release_stats.json)
+          TEITEN_PARQUET_SIZE=$(jq -r '.teiten.parquet_size' release_stats.json)
+          TREND_PARQUET_SIZE=$(jq -r '.trend.parquet_size' release_stats.json)
+          ARI_PARQUET_SIZE=$(jq -r '.ari.parquet_size' release_stats.json)
+
+          TOTAL_CSV_SIZE=$(jq -r '.summary.total_csv_size' release_stats.json)
+          TOTAL_PARQUET_SIZE=$(jq -r '.summary.total_parquet_size' release_stats.json)
+          TOTAL_SIZE=$(jq -r '.summary.total_size' release_stats.json)
+
+          # Get compressed sizes
+          CSV_ZIP_SIZE=$(ls -lh release_assets/kansenshou-data-${LATEST_WEEK}-csv.zip | awk '{print $5}')
+          PARQUET_ZIP_SIZE=$(ls -lh release_assets/kansenshou-data-${LATEST_WEEK}-parquet.zip | awk '{print $5}')
+          FULL_ZIP_SIZE=$(ls -lh release_assets/kansenshou-data-${LATEST_WEEK}-full.zip | awk '{print $5}')
+
+          # Create release body
+          cat > release_body.md << EOF
+          ## 日本感染症サーベイランスデータ / Japanese Infectious Disease Surveillance Data
+
+          **データ期間 / Data Period**: 2012W37 - ${LATEST_WEEK}
+          **更新日 / Updated**: ${UPDATE_DATE}
+          **データソース / Source**: [国立健康危機管理研究機構](https://id-info.jihs.go.jp/surveillance/idwr/)
+
+          ### 📊 データセット / Datasets
+
+          | Type | Description | Records | CSV Size | Parquet Size |
+          |------|-------------|---------|----------|--------------|
+          | **Zensu (総数)** | Total case counts | ${ZENSU_RECORDS} weeks | ${ZENSU_CSV_SIZE} | ${ZENSU_PARQUET_SIZE} |
+          | **Teiten (定点)** | Sentinel surveillance | ${TEITEN_RECORDS} weeks | ${TEITEN_CSV_SIZE} | ${TEITEN_PARQUET_SIZE} |
+          | **Trend (トレンド)** | 10-year historical comparison | ${TREND_RECORDS} weeks | ${TREND_CSV_SIZE} | ${TREND_PARQUET_SIZE} |
+          | **ARI (急性呼吸器感染症)** | Acute respiratory infections | ${ARI_RECORDS} weeks | ${ARI_CSV_SIZE} | ${ARI_PARQUET_SIZE} |
+
+          ### 📥 ダウンロード / Downloads
+
+          - **CSV Format** (${CSV_ZIP_SIZE} compressed): \`kansenshou-data-${LATEST_WEEK}-csv.zip\`
+          - **Parquet Format** (${PARQUET_ZIP_SIZE} compressed, recommended for analysis): \`kansenshou-data-${LATEST_WEEK}-parquet.zip\`
+          - **All Formats** (${FULL_ZIP_SIZE} compressed): \`kansenshou-data-${LATEST_WEEK}-full.zip\`
+          - **Checksums**: \`SHA256SUMS.txt\`
+
+          ### 🔄 変更内容 / Changes
+
+          - Added data for week ${LATEST_WEEK}
+          - Updated all datasets with latest surveillance reports
+
+          ### 📖 利用方法 / Usage
+
+          **Python (pandas)**:
+          \`\`\`python
+          import pandas as pd
+
+          # CSV
+          df = pd.read_csv('merged_teiten.csv')
+
+          # Parquet (faster, smaller)
+          df = pd.read_parquet('merged_teiten.parquet')
+          \`\`\`
+
+          **R**:
+          \`\`\`r
+          # CSV
+          df <- read.csv('merged_teiten.csv')
+
+          # Parquet
+          library(arrow)
+          df <- read_parquet('merged_teiten.parquet')
+          \`\`\`
+
+          **Web Visualization**: https://kansenshou.pages.dev
+
+          ### ⚖️ ライセンス / License
+
+          データは国立健康危機管理研究機構が提供しています。
+          詳細は [DATA_LICENSE.md](https://github.com/ringsaturn/kansenshou/blob/main/DATA_LICENSE.md) および [利用規約.md](https://github.com/ringsaturn/kansenshou/blob/main/利用規約.md) をご覧ください。
+
+          ---
+
+          **データの正確性について**：本データは公開されている感染症サーベイランスデータを機械的に処理したものです。利用にあたっては必ず元データソースをご確認ください。
+          EOF
+
+          cat release_body.md
+
+      - name: Create GitHub Release
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_week.outputs.tag }}
+          name: Data Release ${{ steps.get_week.outputs.week }}
+          body_path: release_body.md
+          files: |
+            release_assets/*.zip
+            release_assets/SHA256SUMS.txt
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
