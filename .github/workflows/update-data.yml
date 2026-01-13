@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "0 1 * * *"
   workflow_dispatch:
+    inputs:
+      skip_update:
+        description: 'Skip data update and only create release'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -22,16 +28,22 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Run data update script
+        if: ${{ !inputs.skip_update }}
         run: |
           uv run python main.py
 
       - name: Check for changes
         id: check_changes
         run: |
-          git diff --quiet data/ || echo "has_changes=true" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.skip_update }}" == "true" ]; then
+            echo "Skip update mode: forcing release creation"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            git diff --quiet data/ || echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and push changes
-        if: steps.check_changes.outputs.has_changes == 'true'
+        if: steps.check_changes.outputs.has_changes == 'true' && !inputs.skip_update
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
