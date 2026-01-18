@@ -50,20 +50,31 @@ jobs:
           cd web
           make copy-data
           
-      - name: Copy Parquet files to public folder
+      - name: Note on Parquet files
         run: |
-          mkdir -p web/public/data/ari web/public/data/teiten web/public/data/zensu web/public/data/trend
-          cp -f data/zensu/merged_zensu.parquet web/public/data/zensu/ || true
-          cp -f data/ari/merged_ari.parquet web/public/data/ari/ || true
-          cp -f data/teiten/merged_teiten.parquet web/public/data/teiten/ || true
-          cp -f data/trend/merged_trend.parquet web/public/data/trend/ || true
-          echo "Parquet files copied to public folder"
+          echo "Parquet files will be uploaded separately to D2 (see next step)"
+          echo "Website will fetch data from D2 instead of bundling files"
 
       - name: Build website
         working-directory: web
         run: bun run build
 
-      - name: Deploy to Cloudflare Pages
+      - name: Upload Parquet files to D2
+        run: |
+          npm install -g wrangler
+          
+          # Upload parquet files to D2
+          wrangler r2 object put data/zensu/merged_zensu.parquet --bucket=kansenshou-data --file=data/zensu/merged_zensu.parquet || true
+          wrangler r2 object put data/ari/merged_ari.parquet --bucket=kansenshou-data --file=data/ari/merged_ari.parquet || true
+          wrangler r2 object put data/teiten/merged_teiten.parquet --bucket=kansenshou-data --file=data/teiten/merged_teiten.parquet || true
+          wrangler r2 object put data/trend/merged_trend.parquet --bucket=kansenshou-data --file=data/trend/merged_trend.parquet || true
+          
+          echo "Parquet files uploaded to D2"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy website to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
