@@ -42,19 +42,27 @@ def download_csv(
             url = f"https://id-info.jihs.go.jp/niid/images/idwr/sokuho/idwr-{year}/{year_week_folder}/{year}-{week:02d}-{data_type}.csv"
     # 2023 onwards (from around week 2): New format using /surveillance/idwr/rapid/
     elif data_type == "trend":
+        # From 2026 onwards, URL path uses zero-padded week numbers
+        week_path = f"{week:02d}" if year >= 2026 else f"{week}"
         if year >= 2025 and week >= 11:
-            url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/week{week:02d}-trend.csv"
+            url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week_path}/week{week:02d}-trend.csv"
         else:
-            url = f"https://id-info.jihs.go.jp/surveillance/idwr/rapid/{year}/{week}/week{week:02d}-trend.csv"
+            url = f"https://id-info.jihs.go.jp/surveillance/idwr/rapid/{year}/{week_path}/week{week:02d}-trend.csv"
     # Starting from 2025, teiten data path changed to /jp/rapid/
     # ari data always uses /jp/rapid/
     # zensu data path changed to /jp/rapid/ from 2025 week 12 onwards
     elif data_type == "zensu" and (year > 2025 or (year == 2025 and week >= 12)):
-        url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
+        # From 2026 onwards, URL path uses zero-padded week numbers
+        week_path = f"{week:02d}" if year >= 2026 else f"{week}"
+        url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week_path}/{year}-{week:02d}-{data_type}.csv"
     elif data_type == "ari" or (data_type == "teiten" and year >= 2025):
-        url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
+        # From 2026 onwards, URL path uses zero-padded week numbers
+        week_path = f"{week:02d}" if year >= 2026 else f"{week}"
+        url = f"https://id-info.jihs.go.jp/surveillance/idwr/jp/rapid/{year}/{week_path}/{year}-{week:02d}-{data_type}.csv"
     else:
-        url = f"https://id-info.jihs.go.jp/surveillance/idwr/rapid/{year}/{week}/{year}-{week:02d}-{data_type}.csv"
+        # From 2026 onwards, URL path uses zero-padded week numbers
+        week_path = f"{week:02d}" if year >= 2026 else f"{week}"
+        url = f"https://id-info.jihs.go.jp/surveillance/idwr/rapid/{year}/{week_path}/{year}-{week:02d}-{data_type}.csv"
 
     # Skip download if file already exists
     if output_file.exists():
@@ -648,15 +656,15 @@ if __name__ == "__main__":
         print("=" * 60)
 
         # Download zensu data (from 2012W37)
-        download_and_process_all(start_year=2012, start_week=37, data_type="zensu")
+        download_and_process_all(start_year=2025, start_week=37, data_type="zensu")
         merge_all_csv("zensu")
 
         # Download teiten data (from 2012W37)
-        download_and_process_all(start_year=2012, start_week=37, data_type="teiten")
+        download_and_process_all(start_year=2025, start_week=37, data_type="teiten")
         merge_all_csv("teiten")
 
         # Download trend data (from 2012W37)
-        download_and_process_all(start_year=2012, start_week=37, data_type="trend")
+        download_and_process_all(start_year=2025, start_week=37, data_type="trend")
         merge_all_csv("trend")
 
         # Download ari data (from 2025W15)
