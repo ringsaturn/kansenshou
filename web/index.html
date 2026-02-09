@@ -55,9 +55,37 @@
 <body>
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
-  <!-- Cloudflare Web Analytics -->
-  <script defer src='https://static.cloudflareinsights.com/beacon.min.js'
-    data-cf-beacon='{"token": "66327c30785c4577be739b953e193074"}'></script><!-- End Cloudflare Web Analytics -->
+  <!-- Cloudflare Web Analytics (lazy loaded after first paint) -->
+  <script>
+    (function loadCloudflareAnalyticsLater() {
+      const inject = function () {
+        const s = document.createElement("script");
+        s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        s.defer = true;
+        s.async = true;
+        s.setAttribute("data-cf-beacon", '{"token":"66327c30785c4577be739b953e193074"}');
+        s.onerror = function () {
+          // Ignore network or DNS blocking errors for analytics script.
+        };
+        document.body.appendChild(s);
+      };
+
+      const runWhenIdle = function () {
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(inject, { timeout: 3000 });
+          return;
+        }
+        window.setTimeout(inject, 1500);
+      };
+
+      if (document.readyState === "complete") {
+        runWhenIdle();
+        return;
+      }
+      window.addEventListener("load", runWhenIdle, { once: true });
+    })();
+  </script>
+  <!-- End Cloudflare Web Analytics -->
 </body>
 
 </html>
