@@ -281,7 +281,16 @@ def generate_mermaid(
     """
     recent = flagged.tail(n_weeks).copy()
 
-    labels = [f"{int(r['年'])}W{int(r['週']):02d}" for _, r in recent.iterrows()]
+    # Show year only on the first week of each year to reduce x-axis clutter
+    labels = []
+    seen_years: set[int] = set()
+    for _, r in recent.iterrows():
+        yr, wk = int(r["年"]), int(r["週"])
+        if yr not in seen_years:
+            labels.append(f"{yr}W{wk:02d}")
+            seen_years.add(yr)
+        else:
+            labels.append(f"W{wk:02d}")
     actual = [int(round(v)) if pd.notna(v) else 0 for v in recent[col]]
     baseline = [int(round(v)) if pd.notna(v) else 0 for v in recent["baseline_med"]]
 
