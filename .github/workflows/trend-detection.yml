@@ -1,0 +1,43 @@
+name: Disease Trend Detection
+
+on:
+  workflow_run:
+    workflows:
+      - "Update Infectious Disease Data"
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  detect-trends:
+    runs-on: ubuntu-latest
+    # Only run when the upstream workflow succeeded (skip on failure)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v6
+
+      - name: Prepare data
+        run: uv run python main.py merge
+
+      - name: Run trend detection
+        run: uv run python detect_trends.py
+
+      - name: Show detection results
+        run: |
+          echo "=== Active alerts ==="
+          jq '.active_alerts[] | {disease, issue_title, current_value, ratio, weeks_active}' trend_alerts.json
+          echo "Active count: $(jq '.active_alerts | length' trend_alerts.json)"
+
+      - name: Manage GitHub issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python manage_issues.py
