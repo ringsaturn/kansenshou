@@ -7,7 +7,6 @@ Designed to be called from the trend-detection GitHub Actions workflow.
 """
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -86,6 +85,7 @@ def create_issue(alert: dict) -> None:
     bm = alert.get("baseline_med") or "N/A"
     z = alert.get("z_score") or "N/A"
     ratio = alert.get("ratio") or "N/A"
+    chart = alert.get("mermaid_chart", "")
 
     body = f"""\
 ## 感染症トレンドアラート / Disease Trend Alert
@@ -95,7 +95,11 @@ def create_issue(alert: dict) -> None:
 **アラート開始 / Alert started**: {yr}年{mo:02d}月 第{wk:02d}週
 **初回検出日 / First detected**: {run_date}
 
-### 検出指標 / Detection metrics (初回 / Initial)
+### トレンド / Trend (bar = actual, line = seasonal baseline)
+
+{chart}
+
+### 検出指標 / Detection metrics
 
 | 指標 | 値 |
 |------|----|
@@ -142,9 +146,12 @@ def update_issue(issue_number: int, alert: dict) -> None:
     cy = alert.get("current_year", "")
     cw = alert.get("current_week", "")
     wa = alert.get("weeks_active", "")
+    chart = alert.get("mermaid_chart", "")
 
     body = f"""\
 ## 週次更新 / Weekly Update — {run_date}
+
+{chart}
 
 | 指標 | 値 |
 |------|----|

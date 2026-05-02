@@ -267,6 +267,43 @@ def find_streak_start(alert_series: pd.Series, current_idx: int) -> int:
     return idx
 
 
+def generate_mermaid(
+    flagged: pd.DataFrame,
+    col: str,
+    disease_name: str,
+    dataset: str,
+    n_weeks: int = 12,
+) -> str:
+    """
+    Build a Mermaid xychart-beta block showing the last n_weeks of data.
+    Bar = actual weekly reports; Line = seasonal baseline median.
+    GitHub renders Mermaid natively in markdown — no image hosting needed.
+    """
+    recent = flagged.tail(n_weeks).copy()
+
+    labels = [f"{int(r['年'])}W{int(r['週']):02d}" for _, r in recent.iterrows()]
+    actual = [int(round(v)) if pd.notna(v) else 0 for v in recent[col]]
+    baseline = [int(round(v)) if pd.notna(v) else 0 for v in recent["baseline_med"]]
+
+    y_max = max(max(actual, default=1), max(baseline, default=0), 1)
+    y_max = int(y_max * 1.2) + 1
+
+    labels_str = ", ".join(f'"{l}"' for l in labels)
+    actual_str = ", ".join(str(v) for v in actual)
+    baseline_str = ", ".join(str(v) for v in baseline)
+
+    return (
+        "```mermaid\n"
+        "xychart-beta\n"
+        f'    title "{disease_name} [{dataset}] — Last {n_weeks} Weeks"\n'
+        f"    x-axis [{labels_str}]\n"
+        f'    y-axis "Cases (national total)" 0 --> {y_max}\n'
+        f"    bar [{actual_str}]\n"
+        f"    line [{baseline_str}]\n"
+        "```"
+    )
+
+
 def detect_disease(
     df: pd.DataFrame, dataset: str, disease_name: str, config: dict
 ) -> dict:
@@ -319,11 +356,12 @@ def detect_disease(
         result["alert_start_month"] = int(pd.Timestamp(streak_row["開始日"]).month)
         result["weeks_active"] = latest_idx - streak_idx + 1
 
-        # Issue title key — used to match existing open issues
         yr = result["alert_start_year"]
         mo = result["alert_start_month"]
         wk = result["alert_start_week"]
         result["issue_title"] = f"{yr}{mo:02d}W({wk:02d}) - {disease_name}"
+
+        result["mermaid_chart"] = generate_mermaid(flagged, col, disease_name, dataset)
 
     return result
 

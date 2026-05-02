@@ -1,3 +1,4 @@
 *.png
 tmp/
 *.parquet
+trend_alerts.json
