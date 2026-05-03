@@ -14,7 +14,8 @@ import {
   LegendComponent,
   GridComponent,
   DataZoomComponent,
-  ToolboxComponent
+  ToolboxComponent,
+  MarkAreaComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 
@@ -26,7 +27,8 @@ use([
   LegendComponent,
   GridComponent,
   DataZoomComponent,
-  ToolboxComponent
+  ToolboxComponent,
+  MarkAreaComponent
 ])
 
 export default {
@@ -66,6 +68,10 @@ export default {
     showArea: {
       type: Boolean,
       default: false
+    },
+    alertRanges: {
+      type: Array,
+      default: () => []
     }
   },
   computed: {
@@ -234,7 +240,13 @@ export default {
                 borderColor: '#fff',
                 borderWidth: 2
               }
-            }
+            },
+            markArea: this.alertRanges.length ? {
+              silent: true,
+              itemStyle: { color: 'rgba(255, 149, 0, 0.12)' },
+              label: { show: false },
+              data: this.alertRanges.map(r => [{ xAxis: r.start }, { xAxis: r.end }])
+            } : undefined
           }
         ]
       }

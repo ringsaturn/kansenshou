@@ -90,13 +90,14 @@
               <h3>{{ selectedDisease }} - 全国推移（総数）</h3>
               <TimeSeriesChart :title="`${selectedDisease} 報告数推移（全国総数）`" :data="nationalChartData" xField="週ラベル"
                 :yField="`${selectedDisease}_報告`" :seriesName="`${selectedDisease} 報告数`" :showArea="true"
-                height="450px" />
+                height="450px" :alertRanges="chartAlertRanges" />
             </div>
 
             <div class="chart-section">
               <h3>{{ selectedDisease }} - 定点当たり報告数推移（総数）</h3>
               <TimeSeriesChart :title="`${selectedDisease} 定点当たり報告数推移（全国総数）`" :data="nationalChartData" xField="週ラベル"
-                :yField="`${selectedDisease}_定当`" :seriesName="`${selectedDisease} 定当`" height="400px" />
+                :yField="`${selectedDisease}_定当`" :seriesName="`${selectedDisease} 定当`" height="400px"
+                :alertRanges="chartAlertRanges" />
             </div>
 
             <div class="chart-section">
@@ -188,6 +189,7 @@ export default {
   data() {
     return {
       data: [],
+      alertData: { active_alerts: [] },
       loading: true,
       error: null,
       filters: {
@@ -313,6 +315,17 @@ export default {
         })
       if (nationalData.length === 0) return null
       return nationalData[0]
+    },
+    chartAlertRanges() {
+      if (!this.selectedDisease || !this.alertData.active_alerts) return []
+      const alert = this.alertData.active_alerts.find(
+        a => a.disease === this.selectedDisease && a.dataset === 'teiten'
+      )
+      if (!alert) return []
+      const start = `${alert.alert_start_year}年第${alert.alert_start_week}週`
+      const latestRow = this.nationalChartData[0]
+      if (!latestRow) return []
+      return [{ start, end: latestRow.週ラベル }]
     }
   },
   watch: {
@@ -326,7 +339,13 @@ export default {
   methods: {
     async loadData() {
       try {
-        const csvText = await loadCSVFromZip('/data/teiten/merged_teiten.zip')
+        const [csvText] = await Promise.all([
+          loadCSVFromZip('/data/teiten/merged_teiten.zip'),
+          fetch('/data/trend_alerts.json')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) this.alertData = data })
+            .catch(() => {})
+        ])
         this.data = parseCSV(csvText)
         this.loading = false
         const q = this.$route.query.disease

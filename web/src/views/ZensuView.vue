@@ -85,25 +85,27 @@
             <div v-if="filters.prefecture === ''">
               <div class="chart-section">
                 <h3>{{ selectedDisease }} - 全国報告数推移（総数）</h3>
-                <TimeSeriesChart 
-                  :title="`${selectedDisease} - 全国報告数推移（総数）`" 
-                  :data="nationalChartData" 
-                  xField="週ラベル" 
+                <TimeSeriesChart
+                  :title="`${selectedDisease} - 全国報告数推移（総数）`"
+                  :data="nationalChartData"
+                  xField="週ラベル"
                   :yField="`${selectedDisease}_報告`"
-                  seriesName="報告数" 
-                  :showArea="true" 
-                  height="450px" />
+                  seriesName="報告数"
+                  :showArea="true"
+                  height="450px"
+                  :alertRanges="chartAlertRanges" />
               </div>
 
               <div class="chart-section" v-if="hasCumulativeData">
                 <h3>{{ selectedDisease }} - 全国累積報告数推移（総数）</h3>
-                <TimeSeriesChart 
-                  :title="`${selectedDisease} - 全国累積報告数推移（総数）`" 
-                  :data="nationalChartData" 
+                <TimeSeriesChart
+                  :title="`${selectedDisease} - 全国累積報告数推移（総数）`"
+                  :data="nationalChartData"
                   xField="週ラベル"
-                  :yField="`${selectedDisease}_累積`" 
-                  seriesName="累積報告数" 
-                  height="400px" />
+                  :yField="`${selectedDisease}_累積`"
+                  seriesName="累積報告数"
+                  height="400px"
+                  :alertRanges="chartAlertRanges" />
               </div>
 
               <div class="chart-section">
@@ -204,6 +206,7 @@ export default {
   data() {
     return {
       data: [],
+      alertData: { active_alerts: [] },
       loading: true,
       error: null,
       filters: {
@@ -336,6 +339,17 @@ export default {
         return parseInt(b.週) - parseInt(a.週)
       })
     },
+    chartAlertRanges() {
+      if (!this.selectedDisease || !this.alertData.active_alerts) return []
+      const alert = this.alertData.active_alerts.find(
+        a => a.disease === this.selectedDisease && a.dataset === 'zensu'
+      )
+      if (!alert) return []
+      const start = `${alert.alert_start_year}年第${alert.alert_start_week}週`
+      const latestRow = this.nationalChartData[0]
+      if (!latestRow) return []
+      return [{ start, end: latestRow.週ラベル }]
+    },
     hasCumulativeData() {
       if (!this.selectedDisease) return false
       const field = `${this.selectedDisease}_累積`
@@ -364,7 +378,13 @@ export default {
   methods: {
     async loadData() {
       try {
-        const csvText = await loadCSVFromZip('/data/zensu/merged_zensu.zip')
+        const [csvText] = await Promise.all([
+          loadCSVFromZip('/data/zensu/merged_zensu.zip'),
+          fetch('/data/trend_alerts.json')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) this.alertData = data })
+            .catch(() => {})
+        ])
         this.data = parseCSV(csvText)
         this.loading = false
         const q = this.$route.query.disease
