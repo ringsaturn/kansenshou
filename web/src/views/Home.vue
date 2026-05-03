@@ -6,6 +6,38 @@
         本システムは、日本の感染症関連データの検索および表示機能を提供します。急性呼吸器感染症、定点報告、全数報告のデータが含まれます。
       </p>
 
+      <div v-if="activeAlerts.length > 0" class="alerts-section">
+        <h2 class="alerts-title">トレンドアラート / Active Alerts</h2>
+        <div class="alerts-grid">
+          <div v-for="alert in activeAlerts" :key="alert.issue_title" class="alert-card">
+            <div class="alert-card-header">
+              <span class="alert-disease">{{ alert.disease }}</span>
+              <span class="alert-dataset-tag">{{ alert.dataset === 'teiten' ? '定点報告' : '全数報告' }}</span>
+            </div>
+            <p class="alert-start">
+              アラート開始: {{ alert.alert_start_year }}年{{ String(alert.alert_start_month).padStart(2, '0') }}月 第{{ String(alert.alert_start_week).padStart(2, '0') }}週
+            </p>
+            <div class="alert-stats">
+              <div class="alert-stat">
+                <span class="stat-num">{{ alert.weeks_active }}</span>
+                <span class="stat-label">週継続</span>
+              </div>
+              <div class="alert-stat">
+                <span class="stat-num">{{ alert.ratio }}x</span>
+                <span class="stat-label">基準比</span>
+              </div>
+              <div class="alert-stat">
+                <span class="stat-num">{{ alert.current_value?.toLocaleString() }}</span>
+                <span class="stat-label">今週報告数</span>
+              </div>
+            </div>
+            <router-link :to="alert.dataset === 'teiten' ? '/teiten' : '/zensu'">
+              <button class="alert-btn">データを見る</button>
+            </router-link>
+          </div>
+        </div>
+      </div>
+
       <div class="data-sources">
         <div class="source-card">
           <h3>急性呼吸器感染症 (ARI)</h3>
@@ -61,7 +93,23 @@
 
 <script>
 export default {
-  name: 'Home'
+  name: 'Home',
+  data() {
+    return {
+      activeAlerts: [],
+    }
+  },
+  async mounted() {
+    try {
+      const resp = await fetch('/data/trend_alerts.json')
+      if (resp.ok) {
+        const data = await resp.json()
+        this.activeAlerts = data.active_alerts || []
+      }
+    } catch {
+      // alerts unavailable — silently skip
+    }
+  },
 }
 </script>
 
@@ -196,5 +244,107 @@ export default {
   left: 0;
   color: #0071e3;
   font-weight: bold;
+}
+
+/* --- Alert section --- */
+.alerts-section {
+  margin-top: 56px;
+  text-align: left;
+}
+
+.alerts-title {
+  font-size: 21px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.01em;
+  margin-bottom: 20px;
+}
+
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.alert-card {
+  background: #fff8f0;
+  border: 1px solid rgba(255, 149, 0, 0.25);
+  border-left: 4px solid #ff9500;
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: left;
+  transition: box-shadow 0.2s;
+}
+
+.alert-card:hover {
+  box-shadow: 0 4px 20px rgba(255, 149, 0, 0.15);
+}
+
+.alert-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.alert-disease {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.01em;
+}
+
+.alert-dataset-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.12);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.alert-start {
+  font-size: 12px;
+  color: #6e6e73;
+  margin-bottom: 16px;
+}
+
+.alert-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.alert-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #6e6e73;
+}
+
+.alert-btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  background: #ff9500;
+  color: #fff;
+  border: none;
+}
+
+.alert-btn:hover {
+  background: #e68600;
 }
 </style>
