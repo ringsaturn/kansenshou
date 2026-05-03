@@ -36,6 +36,7 @@ jobs:
 
       - name: Run trend detection
         run: |
+          mkdir -p web/public/data
           uv run python detect_trends.py \
             && cp trend_alerts.json web/public/data/trend_alerts.json \
             && echo "Trend alerts copied to public/data/" \
