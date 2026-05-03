@@ -7,7 +7,7 @@
       </p>
 
       <div v-if="activeAlerts.length > 0" class="alerts-section">
-        <h2 class="alerts-title">トレンドアラート / Active Alerts</h2>
+        <h2 class="alerts-title">トレンドアラート</h2>
         <div class="alerts-grid">
           <div v-for="alert in activeAlerts" :key="alert.issue_title" class="alert-card">
             <div class="alert-card-header">
