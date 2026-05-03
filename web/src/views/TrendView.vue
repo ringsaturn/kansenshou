@@ -270,12 +270,19 @@ export default {
       return `${minYear}-${maxYear}年`
     }
   },
+  watch: {
+    'filters.disease'(val) {
+      this.$router.replace({ query: { ...this.$route.query, disease: val || undefined } })
+    },
+  },
   methods: {
     async loadData() {
       try {
         const csvText = await loadCSVFromZip('/data/trend/merged_trend.zip')
         this.data = parseCSV(csvText)
         this.loading = false
+        const q = this.$route.query.disease
+        if (q && this.uniqueDiseases.includes(q)) this.filters.disease = q
       } catch (err) {
         this.error = 'データの読み込みに失敗しました: ' + err.message
         this.loading = false

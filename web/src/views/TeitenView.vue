@@ -318,7 +318,10 @@ export default {
   watch: {
     filteredData() {
       this.currentPage = 1
-    }
+    },
+    selectedDisease(val) {
+      this.$router.replace({ query: { ...this.$route.query, disease: val || undefined } })
+    },
   },
   methods: {
     async loadData() {
@@ -326,6 +329,8 @@ export default {
         const csvText = await loadCSVFromZip('/data/teiten/merged_teiten.zip')
         this.data = parseCSV(csvText)
         this.loading = false
+        const q = this.$route.query.disease
+        if (q && this.diseaseList.includes(q)) this.selectedDisease = q
       } catch (err) {
         this.error = 'データの読み込みに失敗しました: ' + err.message
         this.loading = false

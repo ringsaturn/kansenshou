@@ -31,7 +31,7 @@
                 <span class="stat-label">今週報告数</span>
               </div>
             </div>
-            <router-link :to="alert.dataset === 'teiten' ? '/teiten' : '/zensu'">
+            <router-link :to="{ path: alert.dataset === 'teiten' ? '/teiten' : '/zensu', query: { disease: alert.disease } }">
               <button class="alert-btn">データを見る</button>
             </router-link>
           </div>
