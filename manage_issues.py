@@ -58,6 +58,19 @@ def find_open_issue(title: str) -> int | None:
     return None
 
 
+def week_comment_exists(issue_number: int, year: int, week: int) -> bool:
+    """Return True if a weekly update comment for this (year, week) already exists."""
+    result = gh(
+        "issue", "view", str(issue_number),
+        "--json", "comments",
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return False
+    comments = json.loads(result.stdout).get("comments", [])
+    marker = f"{year}年 第{week}週"
+    return any(marker in c.get("body", "") for c in comments)
+
+
 def find_open_issues_for_disease(disease: str) -> list[int]:
     """Find all open trend-alert issues that contain the disease name in the title."""
     result = gh(
@@ -164,6 +177,10 @@ def update_issue(issue_number: int, alert: dict) -> None:
 
 **{disease}** のアラートは継続中です。 / Alert continues.
 """
+
+    if week_comment_exists(issue_number, int(cy), int(cw)):
+        print(f"  Skipped #{issue_number}: {disease} — week {cy}W{cw:02} already commented")
+        return
 
     result = gh("issue", "comment", str(issue_number), "--body", body, capture=False)
     if result.returncode == 0:
