@@ -107,8 +107,7 @@
 </template>
 
 <script>
-import { parseCSV } from '../utils/csvParser.js'
-import { loadCSVFromZip } from '../utils/zipLoader.js'
+import { loadDataset, indexBy } from '../utils/dataLoader.js'
 import TimeSeriesChart from '../components/TimeSeriesChart.vue'
 import HistoricalTrendChart from '../components/HistoricalTrendChart.vue'
 import HeatmapCalendarChart from '../components/HeatmapCalendarChart.vue'
@@ -149,17 +148,31 @@ export default {
       if (this.uniqueReportWeeks.length === 0) return '-'
       return `${Math.min(...this.uniqueReportWeeks)}-${Math.max(...this.uniqueReportWeeks)}`
     },
+    latestReport() {
+      // Latest report year/week in the dataset. Depends only on `data`, so it is computed once.
+      // Use reduce instead of Math.max(...spread): the dataset has >100k rows and spreading overflows the call stack
+      let year = -Infinity
+      let week = -Infinity
+      for (const row of this.data) {
+        if (row.報告年 > year) {
+          year = row.報告年
+          week = row.週
+        } else if (row.報告年 === year && row.週 > week) {
+          week = row.週
+        }
+      }
+      return { year, week }
+    },
     filteredData() {
-      let filtered = this.data
+      // Narrow by disease first via the memoized index so filter changes only scan ~1/20 of the rows
+      let filtered = this.filters.disease
+        ? indexBy(this.data, '疾病').get(this.filters.disease) || []
+        : this.data
 
       // If no report year/week selected, use latest report data by default
       if (!this.filters.reportYear && !this.filters.reportWeek) {
-        // Find latest report year and week
-        // Use reduce instead of Math.max(...spread): the dataset has >100k rows and spreading overflows the call stack
-        const latestYear = this.data.reduce((m, row) => (row.報告年 > m ? row.報告年 : m), -Infinity)
-        const latestWeekData = this.data.filter(row => row.報告年 === latestYear)
-        const latestWeek = latestWeekData.reduce((m, row) => (row.週 > m ? row.週 : m), -Infinity)
-        filtered = this.data.filter(row => row.報告年 === latestYear && row.週 === latestWeek)
+        const { year, week } = this.latestReport
+        filtered = filtered.filter(row => row.報告年 === year && row.週 === week)
       } else {
         if (this.filters.reportYear) {
           filtered = filtered.filter(row => row.報告年 == this.filters.reportYear)
@@ -168,10 +181,6 @@ export default {
         if (this.filters.reportWeek) {
           filtered = filtered.filter(row => row.週 == this.filters.reportWeek)
         }
-      }
-
-      if (this.filters.disease) {
-        filtered = filtered.filter(row => row.疾病 === this.filters.disease)
       }
 
       return filtered
@@ -281,8 +290,7 @@ export default {
   methods: {
     async loadData() {
       try {
-        const csvText = await loadCSVFromZip('/data/trend/merged_trend.zip')
-        this.data = parseCSV(csvText)
+        this.data = await loadDataset('trend')
         this.loading = false
         const q = this.$route.query.disease
         if (q && this.uniqueDiseases.includes(q)) this.filters.disease = q

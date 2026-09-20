@@ -46,9 +46,13 @@
 </template>
 
 <script>
-import { parseCSV } from '../utils/csvParser.js'
-import { loadCSVFromZip } from '../utils/zipLoader.js'
+import { loadDataset, indexBy } from '../utils/dataLoader.js'
 import HistoricalTrendChart from './HistoricalTrendChart.vue'
+
+// Teiten disease names that the trend dataset spells differently
+const TREND_NAME_ALIASES = {
+  'ＲＳウイルス感染症': 'RSウイルス（定点あたり報告数）',
+}
 
 export default {
   name: 'HistoricalComparisonWidget',
@@ -94,7 +98,8 @@ export default {
       }
 
             // Filter data for relevant disease, and only use latest report week data
-      let diseaseData = this.trendData.filter(row => row.疾病 === this.disease)
+      const byDisease = indexBy(this.trendData, '疾病')
+      let diseaseData = byDisease.get(this.disease) || byDisease.get(TREND_NAME_ALIASES[this.disease]) || []
 
       if (diseaseData.length === 0) return []
 
@@ -208,19 +213,8 @@ export default {
       this.error = null
 
       try {
-        // Check if there is global cache
-        if (window.__trendDataCache) {
-          this.trendData = window.__trendDataCache
-          this.loading = false
-          return
-        }
-
-        const csvText = await loadCSVFromZip('/data/trend/merged_trend.zip')
-        const parsedData = parseCSV(csvText)
-
-                // Cache to global to avoid redundant loading
-        window.__trendDataCache = parsedData
-        this.trendData = parsedData
+        // loadDataset caches per session, so this is cheap after the first load
+        this.trendData = await loadDataset('trend')
       } catch (err) {
         this.error = this.$t('widget.loadError')
         console.error(err)

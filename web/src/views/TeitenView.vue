@@ -171,8 +171,7 @@
 </template>
 
 <script>
-import { parseCSV } from '../utils/csvParser.js'
-import { loadCSVFromZip } from '../utils/zipLoader.js'
+import { loadDataset } from '../utils/dataLoader.js'
 import TimeSeriesChart from '../components/TimeSeriesChart.vue'
 import MultiSeriesChart from '../components/MultiSeriesChart.vue'
 import PrefectureComparisonChart from '../components/PrefectureComparisonChart.vue'
@@ -342,14 +341,14 @@ export default {
   methods: {
     async loadData() {
       try {
-        const [csvText] = await Promise.all([
-          loadCSVFromZip('/data/teiten/merged_teiten.zip'),
+        const [rows] = await Promise.all([
+          loadDataset('teiten'),
           fetch('/data/trend_alerts.json')
             .then(r => r.ok ? r.json() : null)
             .then(data => { if (data) this.alertData = data })
             .catch(() => {})
         ])
-        this.data = parseCSV(csvText)
+        this.data = rows
         this.loading = false
         const q = this.$route.query.disease
         if (q && this.diseaseList.includes(q)) this.selectedDisease = q

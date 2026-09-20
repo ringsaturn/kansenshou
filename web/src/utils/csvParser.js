@@ -4,44 +4,73 @@
  * @returns {Array<Object>} Array of objects where keys are column headers
  */
 export function parseCSV(csvText) {
-  const lines = csvText.trim().split("\n");
-  if (lines.length === 0) return [];
-
-  // Parse header
-  const headers = lines[0].split(",").map((h) => h.trim());
-
-  // Parse data rows
+  const lines = csvText.split("\n");
+  const headers = parseHeader(lines);
+  if (!headers) return [];
   const data = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
+  parseLines(lines, headers, 1, lines.length, data);
+  return data;
+}
+
+/**
+ * Same as parseCSV, but yields to the event loop every `chunkLines` lines so
+ * the UI stays responsive while parsing large files (the trend dataset is
+ * >150k rows and takes seconds to parse).
+ * @param {string} csvText
+ * @param {number} chunkLines
+ * @returns {Promise<Array<Object>>}
+ */
+export async function parseCSVAsync(csvText, chunkLines = 5000) {
+  const lines = csvText.split("\n");
+  const headers = parseHeader(lines);
+  if (!headers) return [];
+  const data = [];
+  for (let i = 1; i < lines.length; i += chunkLines) {
+    parseLines(lines, headers, i, Math.min(i + chunkLines, lines.length), data);
+    await yieldToEventLoop();
+  }
+  return data;
+}
+
+function yieldToEventLoop() {
+  if (typeof scheduler !== "undefined" && typeof scheduler.yield === "function") {
+    return scheduler.yield();
+  }
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function parseHeader(lines) {
+  if (lines.length === 0) return null;
+  const headerLine = lines[0].trim();
+  if (!headerLine) return null;
+  return headerLine.split(",").map((h) => h.trim());
+}
+
+function parseLines(lines, headers, from, to, out) {
+  const n = headers.length;
+  for (let i = from; i < to; i++) {
+    let line = lines[i];
+    if (line.endsWith("\r")) line = line.slice(0, -1);
     if (!line.trim()) continue;
 
-    const values = parseCSVLine(line);
-    if (values.length !== headers.length) {
+    // Fast path: no quotes means a plain split is correct
+    const values = line.includes('"') ? parseCSVLine(line) : line.split(",");
+    if (values.length !== n) {
       console.warn(
-        `Line ${i + 1} has ${values.length} values but expected ${
-          headers.length
-        }`
+        `Line ${i + 1} has ${values.length} values but expected ${n}`
       );
       continue;
     }
 
     const row = {};
-    headers.forEach((header, index) => {
-      let value = values[index].trim();
-
-      // Convert numeric strings to numbers
-      if (value !== "" && value !== "-" && !isNaN(value)) {
-        value = parseFloat(value);
-      }
-
-      row[header] = value;
-    });
-
-    data.push(row);
+    for (let j = 0; j < n; j++) {
+      const raw = values[j];
+      // Convert numeric strings to numbers (empty and "-" stay as strings)
+      const num = raw === "" || raw === "-" ? NaN : +raw;
+      row[headers[j]] = Number.isNaN(num) ? raw.trim() : num;
+    }
+    out.push(row);
   }
-
-  return data;
 }
 
 /**

@@ -1,6 +1,8 @@
 <template>
   <div class="chart-container">
-    <v-chart :key="chartKey" :option="chartOption" :style="{ height: height }" autoresize />
+    <!-- notMerge: the number of year series changes between diseases; a full replace avoids stale series
+         without re-creating the ECharts instance (which a :key would do). -->
+    <v-chart :option="chartOption" :update-options="{ notMerge: true }" :style="{ height: height }" autoresize />
   </div>
 </template>
 
@@ -58,23 +60,6 @@ export default {
     return {}
   },
   computed: {
-    chartKey() {
-      if (!this.data || this.data.length === 0) return this.disease
-
-      const first = this.data[0]
-      const last = this.data[this.data.length - 1]
-      const fingerprint = [
-        this.data.length,
-        first?.年,
-        first?.週,
-        first?.定当,
-        last?.年,
-        last?.週,
-        last?.定当
-      ].join('-')
-
-      return `${this.disease}-${fingerprint}`
-    },
     chartOption() {
       // Group data by year
       const yearGroups = {}
