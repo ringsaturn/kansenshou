@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import App from "./App.vue";
+import i18nPlugin from "./i18n/index.js";
 import Home from "./views/Home.vue";
 import ARIView from "./views/ARIView.vue";
 import TeitenView from "./views/TeitenView.vue";
@@ -22,4 +23,5 @@ const router = createRouter({
 
 const app = createApp(App);
 app.use(router);
+app.use(i18nPlugin);
 app.mount("#app");

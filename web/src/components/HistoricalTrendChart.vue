@@ -87,7 +87,7 @@ export default {
 
       // Get all weeks for X axis
       const weeks = [...new Set(this.data.map(item => item.週))].sort((a, b) => a - b)
-      const xData = weeks.map(w => `第${w}週`)
+      const xData = weeks.map(w => this.$t('common.weekOption', { week: w }))
 
       // Get year list and sort
       const years = Object.keys(yearGroups).sort((a, b) => b - a)
@@ -113,7 +113,7 @@ export default {
         const color = isLatest ? latestYearColor : historicalColors[index % historicalColors.length]
 
         return {
-          name: `${year}年`,
+          name: this.$t('common.yearLabel', { year }),
           type: 'line',
           data: yData,
           smooth: true,
@@ -154,7 +154,7 @@ export default {
 
       // Add average line series
       seriesData.push({
-        name: '過去9年平均',
+        name: this.$t('chart.pastAvg', { n: years.length - 1 }),
         type: 'line',
         data: avgData,
         smooth: true,
@@ -209,7 +209,7 @@ export default {
 
             sorted.forEach(param => {
               if (param.value !== null && param.value !== undefined) {
-                const isLatest = param.seriesName === `${latestYear}年`
+                const isLatest = param.seriesName === this.$t('common.yearLabel', { year: latestYear })
                 const style = isLatest ? 'font-weight: 600;' : ''
                 const valueText = typeof param.value === 'number' ? param.value.toFixed(2) : param.value
                 result += `${param.marker}<span style="${style}">${param.seriesName}: ${valueText}</span><br/>`
@@ -244,15 +244,15 @@ export default {
             dataZoom: {
               yAxisIndex: 'none',
               title: {
-                zoom: 'ズーム',
-                back: '戻る'
+                zoom: this.$t('chart.zoom'),
+                back: this.$t('chart.back')
               }
             },
             restore: {
-              title: 'リセット'
+              title: this.$t('chart.reset')
             },
             saveAsImage: {
-              title: '画像として保存',
+              title: this.$t('chart.saveImage'),
               name: this.title
             }
           },
@@ -285,7 +285,7 @@ export default {
         },
         yAxis: {
           type: 'value',
-          name: '定点当たり',
+          name: this.$t('common.perSentinel'),
           nameTextStyle: {
             color: '#6e6e73',
             fontSize: 12

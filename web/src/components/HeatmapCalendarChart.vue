@@ -118,8 +118,8 @@ export default {
             const year = years[params.value[1]]
             const week = weeks[params.value[0]]
             const value = params.value[2]
-            return `<div style="font-weight: 600; margin-bottom: 4px;">${year}年 第${week}週</div>
-                    定点当たり: <span style="font-weight: 600; color: #0071e3;">${value.toFixed(2)}</span>`
+            return `<div style="font-weight: 600; margin-bottom: 4px;">${this.$t('chart.heatmapTooltip', { year, week })}</div>
+                    ${this.$t('common.perSentinel')}: <span style="font-weight: 600; color: #0071e3;">${value.toFixed(2)}</span>`
           }
         },
         grid: {
@@ -132,7 +132,7 @@ export default {
         toolbox: {
           feature: {
             saveAsImage: {
-              title: '画像として保存',
+              title: this.$t('chart.saveImage'),
               name: this.title
             }
           },
@@ -141,7 +141,7 @@ export default {
         },
         xAxis: {
           type: 'category',
-          data: weeks.map(w => `${w}週`),
+          data: weeks.map(w => this.$t('chart.weekAxis', { week: w })),
           splitArea: {
             show: true,
             areaStyle: {
@@ -165,7 +165,7 @@ export default {
         },
         yAxis: {
           type: 'category',
-          data: years.map(y => `${y}年`),
+          data: years.map(y => this.$t('common.yearLabel', { year: y })),
           splitArea: {
             show: true,
             areaStyle: {
@@ -177,7 +177,7 @@ export default {
             color: '#1d1d1f',
             fontWeight: (value) => {
               // Make latest year bold
-              return value === `${years[years.length - 1]}年` ? 600 : 400
+              return value === this.$t('common.yearLabel', { year: years[years.length - 1] }) ? 600 : 400
             }
           },
           axisLine: {
@@ -199,7 +199,7 @@ export default {
           inRange: {
             color: colorStops.map(s => s.color)
           },
-          text: ['高', '低'],
+          text: [this.$t('chart.high'), this.$t('chart.low')],
           textStyle: {
             color: '#6e6e73',
             fontSize: 11
@@ -210,7 +210,7 @@ export default {
         },
         series: [
           {
-            name: this.disease,
+            name: this.$disease(this.disease),
             type: 'heatmap',
             data: heatmapData,
             label: {

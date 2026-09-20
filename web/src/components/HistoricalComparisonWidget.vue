@@ -6,7 +6,7 @@
 
     <div class="comparison-content">
       <div v-if="loading" class="loading-text">
-        過去データを読み込み中...
+        {{ $t('widget.loading') }}
       </div>
 
       <div v-else-if="error" class="error-text">
@@ -16,30 +16,30 @@
       <div v-else-if="hasHistoricalData">
         <div class="comparison-stats">
           <div class="stat-item">
-            <div class="stat-label">現在の値</div>
+            <div class="stat-label">{{ $t('widget.currentValue') }}</div>
             <div class="stat-value" :class="comparisonClass">{{ currentValue }}</div>
           </div>
           <div class="stat-item">
-            <div class="stat-label">過去平均 ({{ historicalYearsCount }}年間)</div>
+            <div class="stat-label">{{ $t('widget.pastAverage', { n: historicalYearsCount }) }}</div>
             <div class="stat-value">{{ historicalAverage }}</div>
           </div>
           <div class="stat-item">
-            <div class="stat-label">過去最高</div>
+            <div class="stat-label">{{ $t('widget.pastMax') }}</div>
             <div class="stat-value">{{ historicalMax }}</div>
           </div>
           <div class="stat-item">
-            <div class="stat-label">比較</div>
+            <div class="stat-label">{{ $t('widget.comparison') }}</div>
             <div class="stat-value" :class="comparisonClass">
               {{ comparisonText }}
             </div>
           </div>
         </div>
 
-        <HistoricalTrendChart :title="`${disease} - ${comparisonTitle}`" :data="chartData" :disease="disease" height="450px" />
+        <HistoricalTrendChart :title="`${$disease(disease)} - ${comparisonTitle}`" :data="chartData" :disease="disease" height="450px" />
       </div>
 
       <div v-else class="no-data-text">
-        この週のデータは過去のトレンドデータに含まれていません
+        {{ $t('widget.noData') }}
       </div>
     </div>
   </div>
@@ -117,6 +117,8 @@ export default {
           const weekNum = weekCol.replace('週', '')
           const value = row[weekCol]
 
+          // Skip non-numeric columns such as 報告週
+          if (isNaN(parseInt(weekNum))) return
           if (value !== null && value !== undefined && value !== '') {
             result.push({
               報告年: row.報告年,
@@ -124,7 +126,7 @@ export default {
               疾病: row.疾病,
               年: row.年,
               週: parseInt(weekNum),
-              週ラベル: `第${weekNum}週`,
+              週ラベル: this.$t('common.weekOption', { week: weekNum }),
               定当: parseFloat(value)
             })
           }
@@ -159,9 +161,9 @@ export default {
       return years.size
     },
     comparisonTitle() {
-      if (this.historicalYearsCount === 0) return '過去データとの比較'
-      if (this.historicalYearsCount >= 10) return '過去10年間との比較'
-      return `過去${this.historicalYearsCount}年間との比較`
+      if (this.historicalYearsCount === 0) return this.$t('widget.titleNoData')
+      if (this.historicalYearsCount >= 10) return this.$t('widget.titleTen')
+      return this.$t('widget.titleN', { n: this.historicalYearsCount })
     },
     historicalAverage() {
       if (this.historicalValues.length === 0) return '-'
@@ -183,7 +185,7 @@ export default {
       } else if (diff < 0) {
         return `${diff}%`
       } else {
-        return '平均並み'
+        return this.$t('widget.average')
       }
     },
     comparisonClass() {
@@ -220,7 +222,7 @@ export default {
         window.__trendDataCache = parsedData
         this.trendData = parsedData
       } catch (err) {
-        this.error = '過去データの読み込みに失敗しました'
+        this.error = this.$t('widget.loadError')
         console.error(err)
       } finally {
         this.loading = false

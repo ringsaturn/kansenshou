@@ -1,10 +1,10 @@
 <template>
   <div class="ari-view">
     <div class="card">
-      <h2>急性呼吸器感染症データ</h2>
+      <h2>{{ $t('ari.title') }}</h2>
 
       <div v-if="loading" class="loading">
-        データを読み込み中...
+        {{ $t('common.loading') }}
       </div>
 
       <div v-else-if="error" class="error">
@@ -14,15 +14,15 @@
       <div v-else>
         <div class="stats">
           <div class="stat-card">
-            <div class="stat-label">総データ件数</div>
+            <div class="stat-label">{{ $t('stats.totalRecords') }}</div>
             <div class="stat-value">{{ filteredData.length }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">都道府県数</div>
+            <div class="stat-label">{{ $t('stats.prefectureCount') }}</div>
             <div class="stat-value">{{ uniquePrefectures.length }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">週の範囲</div>
+            <div class="stat-label">{{ $t('stats.weekRange') }}</div>
             <div class="stat-value">{{ weekRange }}</div>
           </div>
         </div>
@@ -30,41 +30,41 @@
         <!-- View Toggle -->
         <div class="view-toggle">
           <button :class="{ active: viewMode === 'chart' }" @click="viewMode = 'chart'">
-            📊 グラフ表示
+            {{ $t('common.chartView') }}
           </button>
           <button :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">
-            📋 テーブル表示
+            {{ $t('common.tableView') }}
           </button>
         </div>
 
         <div class="filters">
           <div class="filter-group">
-            <label>年</label>
+            <label>{{ $t('common.year') }}</label>
             <select v-model="filters.year">
-              <option value="">すべて</option>
+              <option value="">{{ $t('common.all') }}</option>
               <option v-for="year in uniqueYears" :key="year" :value="year">{{ year }}</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>週</label>
+            <label>{{ $t('common.week') }}</label>
             <select v-model="filters.week">
-              <option value="">すべて</option>
-              <option v-for="week in uniqueWeeks" :key="week" :value="week">第{{ week }}週</option>
+              <option value="">{{ $t('common.all') }}</option>
+              <option v-for="week in uniqueWeeks" :key="week" :value="week">{{ $t('common.weekOption', { week }) }}</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>都道府県</label>
+            <label>{{ $t('common.prefecture') }}</label>
             <select v-model="filters.prefecture">
-              <option value="">すべて（全国）</option>
-              <option v-for="pref in uniquePrefectures" :key="pref" :value="pref">{{ pref }}</option>
+              <option value="">{{ $t('common.allNational') }}</option>
+              <option v-for="pref in uniquePrefectures" :key="pref" :value="pref">{{ $pref(pref) }}</option>
             </select>
           </div>
 
           <div class="filter-group">
             <label>&nbsp;</label>
-            <button @click="resetFilters">フィルタをリセット</button>
+            <button @click="resetFilters">{{ $t('common.resetFilters') }}</button>
           </div>
         </div>
 
@@ -72,29 +72,29 @@
         <div v-if="viewMode === 'chart'" class="chart-view">
           <div v-if="filters.prefecture === ''">
             <div class="chart-section">
-              <h3>急性呼吸器感染症 - 全国報告数推移（総数）</h3>
-              <TimeSeriesChart title="急性呼吸器感染症 全国報告数推移（総数）" :data="nationalChartData" xField="週ラベル" yField="急性呼吸器感染症_報告"
-                seriesName="報告数" :showArea="true" height="450px" />
+              <h3>{{ $t('ari.nationalTrend', { disease: diseaseName }) }}</h3>
+              <TimeSeriesChart :title="$t('ari.nationalTrendChart', { disease: diseaseName })" :data="nationalChartData" xField="週ラベル" yField="急性呼吸器感染症_報告"
+                :seriesName="$t('common.reportCount')" :showArea="true" height="450px" />
             </div>
 
             <div class="chart-section">
-              <h3>急性呼吸器感染症 - 定点当たり報告数推移（総数）</h3>
-              <TimeSeriesChart title="急性呼吸器感染症 定点当たり報告数推移（総数）" :data="nationalChartData" xField="週ラベル"
-                yField="急性呼吸器感染症_定当" seriesName="定点当たり" height="400px" />
+              <h3>{{ $t('ari.perSentinelTrend', { disease: diseaseName }) }}</h3>
+              <TimeSeriesChart :title="$t('ari.perSentinelTrendChart', { disease: diseaseName })" :data="nationalChartData" xField="週ラベル"
+                yField="急性呼吸器感染症_定当" :seriesName="$t('common.perSentinel')" height="400px" />
             </div>
 
             <div class="chart-section">
-              <h3>急性呼吸器感染症 - 都道府県別比較 (Top 15)</h3>
-              <PrefectureComparisonChart title="急性呼吸器感染症 都道府県別報告数" :data="prefectureComparisonData"
+              <h3>{{ diseaseName }} - {{ $t('common.topN', { n: 15 }) }}</h3>
+              <PrefectureComparisonChart :title="$t('ari.prefChart', { disease: diseaseName })" :data="prefectureComparisonData"
                 valueField="急性呼吸器感染症_報告" :topN="15" height="600px" />
             </div>
           </div>
           <div v-else>
             <div class="chart-section">
-              <h3>{{ filters.prefecture }} - 急性呼吸器感染症</h3>
-              <MultiSeriesChart :title="`${filters.prefecture} - 急性呼吸器感染症`" :data="chartData" xField="週ラベル" :series="[
-                { field: '急性呼吸器感染症_報告', name: '報告数', color: '#0071e3' },
-                { field: '急性呼吸器感染症_定当', name: '定点当たり', color: '#34c759' }
+              <h3>{{ $pref(filters.prefecture) }} - {{ diseaseName }}</h3>
+              <MultiSeriesChart :title="`${$pref(filters.prefecture)} - ${diseaseName}`" :data="chartData" xField="週ラベル" :series="[
+                { field: '急性呼吸器感染症_報告', name: $t('common.reportCount'), color: '#0071e3' },
+                { field: '急性呼吸器感染症_定当', name: $t('common.perSentinel'), color: '#34c759' }
               ]" height="450px" />
             </div>
           </div>
@@ -106,14 +106,14 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>年</th>
-                  <th>週</th>
-                  <th>月</th>
-                  <th>開始日</th>
-                  <th>終了日</th>
-                  <th>都道府県</th>
-                  <th>報告数</th>
-                  <th>定当</th>
+                  <th>{{ $t('common.year') }}</th>
+                  <th>{{ $t('common.week') }}</th>
+                  <th>{{ $t('common.month') }}</th>
+                  <th>{{ $t('common.startDate') }}</th>
+                  <th>{{ $t('common.endDate') }}</th>
+                  <th>{{ $t('common.prefecture') }}</th>
+                  <th>{{ $t('common.reportCount') }}</th>
+                  <th>{{ $t('ari.perSentinelShort') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,7 +123,7 @@
                   <td>{{ row.月 }}</td>
                   <td>{{ row.開始日 }}</td>
                   <td>{{ row.終了日 }}</td>
-                  <td>{{ row.都道府県 }}</td>
+                  <td>{{ $pref(row.都道府県) }}</td>
                   <td>{{ formatNumber(row.急性呼吸器感染症_報告) }}</td>
                   <td>{{ formatNumber(row.急性呼吸器感染症_定当) }}</td>
                 </tr>
@@ -132,20 +132,20 @@
           </div>
 
           <div class="pagination" v-if="totalPages > 1">
-            <button @click="prevPage" :disabled="currentPage === 1">前へ</button>
-            <span class="page-info">{{ currentPage }} / {{ totalPages }} ページ</span>
-            <button @click="nextPage" :disabled="currentPage === totalPages">次へ</button>
+            <button @click="prevPage" :disabled="currentPage === 1">{{ $t('common.prev') }}</button>
+            <span class="page-info">{{ $t('common.pageInfo', { current: currentPage, total: totalPages }) }}</span>
+            <button @click="nextPage" :disabled="currentPage === totalPages">{{ $t('common.next') }}</button>
           </div>
         </div>
 
         <div class="data-source">
           <p>
-            データ出典：国立健康危機管理研究機構 感染症情報提供サイトのデータを加工して作成<br>
+            {{ $t('common.dataSource') }}<br>
             <a href="https://id-info.jihs.go.jp/surveillance/idwr/" target="_blank" rel="noopener noreferrer">
               https://id-info.jihs.go.jp/surveillance/idwr/
             </a><br>
             <a href="https://id-info.jihs.go.jp/usage-contract.html" target="_blank" rel="noopener noreferrer">
-              利用規約
+              {{ $t('common.terms') }}
             </a>
           </p>
         </div>
@@ -186,6 +186,9 @@ export default {
     }
   },
   computed: {
+    diseaseName() {
+      return this.$disease('急性呼吸器感染症')
+    },
     uniqueYears() {
       return [...new Set(this.data.map(row => row.年))].sort((a, b) => b - a)
     },
@@ -247,7 +250,7 @@ export default {
       // Prepare data for chart, add week label field
       return this.filteredData.map(row => ({
         ...row,
-        週ラベル: `${row.年}年第${row.週}週`
+        週ラベル: this.$t('common.weekLabel', { year: row.年, week: row.週 })
       }))
     },
     nationalChartData() {
@@ -296,7 +299,7 @@ export default {
         this.data = parseCSV(csvText)
         this.loading = false
       } catch (err) {
-        this.error = 'データの読み込みに失敗しました: ' + err.message
+        this.error = this.$t('common.loadError', { msg: err.message })
         this.loading = false
       }
     },

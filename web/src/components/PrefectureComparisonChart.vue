@@ -74,7 +74,7 @@ export default {
         .sort((a, b) => b[1] - a[1])
         .slice(0, this.topN)
 
-      const prefectures = sortedData.map(item => item[0])
+      const prefectures = sortedData.map(item => this.$pref(item[0]))
       const values = sortedData.map(item => item[1])
 
       return {
@@ -101,7 +101,7 @@ export default {
           formatter: (params) => {
             if (!params || params.length === 0) return ''
             const param = params[0]
-            return `${param.name}<br/>${param.marker}合計: <b>${param.value.toLocaleString()}</b>`
+            return `${param.name}<br/>${param.marker}${this.$t('chart.total')}: <b>${param.value.toLocaleString()}</b>`
           }
         },
         grid: {
@@ -114,7 +114,7 @@ export default {
         toolbox: {
           feature: {
             saveAsImage: {
-              title: '画像として保存',
+              title: this.$t('chart.saveImage'),
               name: this.title
             }
           },

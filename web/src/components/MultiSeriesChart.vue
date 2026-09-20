@@ -145,15 +145,15 @@ export default {
             dataZoom: {
               yAxisIndex: 'none',
               title: {
-                zoom: 'ズーム',
-                back: '戻る'
+                zoom: this.$t('chart.zoom'),
+                back: this.$t('chart.back')
               }
             },
             restore: {
-              title: 'リセット'
+              title: this.$t('chart.reset')
             },
             saveAsImage: {
-              title: '画像として保存',
+              title: this.$t('chart.saveImage'),
               name: this.title
             }
           },

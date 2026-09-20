@@ -1,10 +1,10 @@
 <template>
   <div class="trend-view">
     <div class="card">
-      <h2>{{ yearRangeText }}トレンドデータ</h2>
+      <h2>{{ $t('trend.title', { range: yearRangeText }) }}</h2>
 
       <div v-if="loading" class="loading">
-        データを読み込み中...
+        {{ $t('common.loading') }}
       </div>
 
       <div v-else-if="error" class="error">
@@ -14,91 +14,90 @@
       <div v-else>
         <div class="stats">
           <div class="stat-card">
-            <div class="stat-label">総データ件数</div>
+            <div class="stat-label">{{ $t('stats.totalRecords') }}</div>
             <div class="stat-value">{{ data.length }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">疾患種類</div>
+            <div class="stat-label">{{ $t('stats.diseaseCount') }}</div>
             <div class="stat-value">{{ uniqueDiseases.length }}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">報告週範囲</div>
+            <div class="stat-label">{{ $t('stats.reportWeekRange') }}</div>
             <div class="stat-value">{{ reportWeekRange }}</div>
           </div>
         </div>
 
         <div class="filters">
           <div class="filter-group">
-            <label>報告年</label>
+            <label>{{ $t('common.reportYear') }}</label>
             <select v-model="filters.reportYear">
-              <option value="">すべて</option>
+              <option value="">{{ $t('common.all') }}</option>
               <option v-for="year in uniqueReportYears" :key="year" :value="year">{{ year }}</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>報告週</label>
+            <label>{{ $t('common.reportWeek') }}</label>
             <select v-model="filters.reportWeek">
-              <option value="">すべて</option>
-              <option v-for="week in uniqueReportWeeks" :key="week" :value="week">第{{ week }}週</option>
+              <option value="">{{ $t('common.all') }}</option>
+              <option v-for="week in uniqueReportWeeks" :key="week" :value="week">{{ $t('common.weekOption', { week }) }}</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>疾患</label>
+            <label>{{ $t('common.disease') }}</label>
             <select v-model="filters.disease">
-              <option value="">選択してください</option>
-              <option v-for="disease in uniqueDiseases" :key="disease" :value="disease">{{ disease }}</option>
+              <option value="">{{ $t('common.selectPlaceholder') }}</option>
+              <option v-for="disease in uniqueDiseases" :key="disease" :value="disease">{{ $disease(disease) }}</option>
             </select>
           </div>
 
           <div class="filter-group">
             <label>&nbsp;</label>
-            <button @click="resetFilters">フィルタをリセット</button>
+            <button @click="resetFilters">{{ $t('common.resetFilters') }}</button>
           </div>
         </div>
 
         <!-- Chart View -->
         <div v-if="filters.disease" class="chart-view">
           <div class="chart-section">
-            <h3>{{ filters.disease }} - {{ yearRangeText }}の推移比較</h3>
+            <h3>{{ $t('trend.comparison', { disease: diseaseName, range: yearRangeText }) }}</h3>
             <p class="chart-description">
-              {{ filters.reportYear || '最新' }}年第{{ filters.reportWeek || '最新' }}週時点でのデータ。
-              各線は{{ yearRangeText }}の同週における定点当たり報告数を示しています。
+              <template v-if="filters.reportYear && filters.reportWeek">{{ $t('trend.comparisonDesc', { year: filters.reportYear, week: filters.reportWeek, range: yearRangeText }) }}</template>
+              <template v-else>{{ $t('trend.comparisonDescLatest', { range: yearRangeText }) }}</template>
             </p>
-            <HistoricalTrendChart :title="`${filters.disease} - ${yearRangeText}トレンド`" :data="chartData"
+            <HistoricalTrendChart :title="$t('trend.comparisonChart', { disease: diseaseName, range: yearRangeText })" :data="chartData"
               :disease="filters.disease" height="500px" />
           </div>
 
           <div class="chart-section" v-if="latestYearData.length > 0">
-            <h3>{{ filters.disease }} - 最新年度詳細</h3>
-            <TimeSeriesChart :title="`${filters.disease} - ${latestYear}年 週別推移`" :data="latestYearData" xField="週"
-              :yField="String(latestYear)" :seriesName="`${latestYear}年`" :showArea="true" height="400px" />
+            <h3>{{ $t('trend.latestYearDetail', { disease: diseaseName }) }}</h3>
+            <TimeSeriesChart :title="$t('trend.latestYearChart', { disease: diseaseName, year: latestYear })" :data="latestYearData" xField="週"
+              :yField="String(latestYear)" :seriesName="$t('common.yearLabel', { year: latestYear })" :showArea="true" height="400px" />
           </div>
 
           <div class="chart-section">
-            <h3>{{ filters.disease }} - 熱力カレンダー</h3>
+            <h3>{{ $t('trend.heatmap', { disease: diseaseName }) }}</h3>
             <p class="chart-description">
-              {{ yearRangeText }}の週別データを色の濃淡で表示。濃い色は報告数が多く、薄い色は少ないことを示します。
-              季節性パターンや年ごとの違いを視覚的に把握できます。
+              {{ $t('trend.heatmapDesc', { range: yearRangeText }) }}
             </p>
-            <HeatmapCalendarChart :title="`${filters.disease} - 週別熱力マップ`" :data="chartData" :disease="filters.disease"
+            <HeatmapCalendarChart :title="$t('trend.heatmapChart', { disease: diseaseName })" :data="chartData" :disease="filters.disease"
               height="650px" />
           </div>
         </div>
 
         <div v-else class="chart-notice">
-          疾患を選択してグラフを表示してください
+          {{ $t('common.selectDiseaseToChart') }}
         </div>
 
         <div class="data-source">
           <p>
-            データ出典：国立健康危機管理研究機構 感染症情報提供サイトのデータを加工して作成<br>
+            {{ $t('common.dataSource') }}<br>
             <a href="https://id-info.jihs.go.jp/surveillance/idwr/" target="_blank" rel="noopener noreferrer">
               https://id-info.jihs.go.jp/surveillance/idwr/
             </a><br>
             <a href="https://id-info.jihs.go.jp/usage-contract.html" target="_blank" rel="noopener noreferrer">
-              利用規約
+              {{ $t('common.terms') }}
             </a>
           </p>
         </div>
@@ -134,6 +133,9 @@ export default {
     }
   },
   computed: {
+    diseaseName() {
+      return this.$disease(this.filters.disease)
+    },
     uniqueReportYears() {
       return [...new Set(this.data.map(row => row.報告年))].sort((a, b) => b - a)
     },
@@ -153,9 +155,10 @@ export default {
       // If no report year/week selected, use latest report data by default
       if (!this.filters.reportYear && !this.filters.reportWeek) {
         // Find latest report year and week
-        const latestYear = Math.max(...this.data.map(row => row.報告年))
+        // Use reduce instead of Math.max(...spread): the dataset has >100k rows and spreading overflows the call stack
+        const latestYear = this.data.reduce((m, row) => (row.報告年 > m ? row.報告年 : m), -Infinity)
         const latestWeekData = this.data.filter(row => row.報告年 === latestYear)
-        const latestWeek = Math.max(...latestWeekData.map(row => row.週))
+        const latestWeek = latestWeekData.reduce((m, row) => (row.週 > m ? row.週 : m), -Infinity)
         filtered = this.data.filter(row => row.報告年 === latestYear && row.週 === latestWeek)
       } else {
         if (this.filters.reportYear) {
@@ -196,7 +199,7 @@ export default {
             疾病: row.疾病,
             年: row.年,
             週: weekNumInt,
-            週ラベル: `第${weekNum}週`,
+            週ラベル: this.$t('common.weekOption', { week: weekNum }),
             定当: parseFloat(value)
           })
         })
@@ -247,9 +250,9 @@ export default {
       return sortedData
     },
     yearRangeText() {
-      if (this.chartData.length === 0) return '過去10年間'
+      if (this.chartData.length === 0) return this.$t('trend.pastTenYears')
       const years = [...new Set(this.chartData.map(d => d.年))].sort((a, b) => a - b)
-      if (years.length === 0) return '過去10年間'
+      if (years.length === 0) return this.$t('trend.pastTenYears')
 
       const yearCount = years.length
       const minYear = years[0]
@@ -257,17 +260,17 @@ export default {
 
       // If only one year of data
       if (yearCount === 1) {
-        return `${minYear}年`
+        return this.$t('common.yearLabel', { year: minYear })
       }
 
       // If years are consecutive, show the count
       const isConsecutive = years.every((year, i) => i === 0 || year === years[i - 1] + 1)
       if (isConsecutive) {
-        return `過去${yearCount}年間`
+        return this.$t('trend.pastYears', { n: yearCount })
       }
 
       // Otherwise show year range
-      return `${minYear}-${maxYear}年`
+      return this.$t('common.yearLabel', { year: `${minYear}-${maxYear}` })
     }
   },
   watch: {
@@ -284,7 +287,7 @@ export default {
         const q = this.$route.query.disease
         if (q && this.uniqueDiseases.includes(q)) this.filters.disease = q
       } catch (err) {
-        this.error = 'データの読み込みに失敗しました: ' + err.message
+        this.error = this.$t('common.loadError', { msg: err.message })
         this.loading = false
       }
     },

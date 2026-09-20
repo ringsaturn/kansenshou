@@ -1,38 +1,38 @@
 <template>
   <div class="home">
     <div class="card welcome-card">
-      <h1>感染症データ検索システムへようこそ</h1>
+      <h1>{{ $t('home.title') }}</h1>
       <p class="welcome-text">
-        本システムは、日本の感染症関連データの検索および表示機能を提供します。急性呼吸器感染症、定点報告、全数報告のデータが含まれます。
+        {{ $t('home.intro') }}
       </p>
 
       <div v-if="activeAlerts.length > 0" class="alerts-section">
-        <h2 class="alerts-title">トレンドアラート</h2>
+        <h2 class="alerts-title">{{ $t('home.alertsTitle') }}</h2>
         <div class="alerts-grid">
           <div v-for="alert in activeAlerts" :key="alert.issue_title" class="alert-card">
             <div class="alert-card-header">
-              <span class="alert-disease">{{ alert.disease }}</span>
-              <span class="alert-dataset-tag">{{ alert.dataset === 'teiten' ? '定点報告' : '全数報告' }}</span>
+              <span class="alert-disease">{{ $disease(alert.disease) }}</span>
+              <span class="alert-dataset-tag">{{ alert.dataset === 'teiten' ? $t('nav.teiten') : $t('nav.zensu') }}</span>
             </div>
             <p class="alert-start">
-              アラート開始: {{ alert.alert_start_year }}年{{ String(alert.alert_start_month).padStart(2, '0') }}月 第{{ String(alert.alert_start_week).padStart(2, '0') }}週
+              {{ $t('home.alertStart', { year: alert.alert_start_year, month: String(alert.alert_start_month).padStart(2, '0'), week: String(alert.alert_start_week).padStart(2, '0') }) }}
             </p>
             <div class="alert-stats">
               <div class="alert-stat">
                 <span class="stat-num">{{ alert.weeks_active }}</span>
-                <span class="stat-label">週継続</span>
+                <span class="stat-label">{{ $t('home.weeksActive') }}</span>
               </div>
               <div class="alert-stat">
                 <span class="stat-num">{{ alert.ratio }}x</span>
-                <span class="stat-label">基準比</span>
+                <span class="stat-label">{{ $t('home.ratio') }}</span>
               </div>
               <div class="alert-stat">
                 <span class="stat-num">{{ alert.current_value?.toLocaleString() }}</span>
-                <span class="stat-label">今週報告数</span>
+                <span class="stat-label">{{ $t('home.currentWeekCount') }}</span>
               </div>
             </div>
             <router-link :to="{ path: alert.dataset === 'teiten' ? '/teiten' : '/zensu', query: { disease: alert.disease } }">
-              <button class="alert-btn">データを見る</button>
+              <button class="alert-btn">{{ $t('home.viewData') }}</button>
             </router-link>
           </div>
         </div>
@@ -40,47 +40,47 @@
 
       <div class="data-sources">
         <div class="source-card">
-          <h3>急性呼吸器感染症 (ARI)</h3>
-          <p>急性呼吸器感染症の報告データ。地域と時間別に集計されています。</p>
+          <h3>{{ $t('home.ariTitle') }}</h3>
+          <p>{{ $t('home.ariDesc') }}</p>
           <router-link to="/ari">
-            <button>データを見る</button>
+            <button>{{ $t('home.viewData') }}</button>
           </router-link>
         </div>
 
         <div class="source-card">
-          <h3>定点報告 (Teiten)</h3>
-          <p>各種感染症の定点医療機関報告データ。インフルエンザ、咽頭炎など多数の疾患を含みます。</p>
+          <h3>{{ $t('home.teitenTitle') }}</h3>
+          <p>{{ $t('home.teitenDesc') }}</p>
           <router-link to="/teiten">
-            <button>データを見る</button>
+            <button>{{ $t('home.viewData') }}</button>
           </router-link>
         </div>
 
         <div class="source-card">
-          <h3>全数報告 (Zensu)</h3>
-          <p>法定感染症の全数報告データ。全面的な監視が必要な各種感染症を網羅しています。</p>
+          <h3>{{ $t('home.zensuTitle') }}</h3>
+          <p>{{ $t('home.zensuDesc') }}</p>
           <router-link to="/zensu">
-            <button>データを見る</button>
+            <button>{{ $t('home.viewData') }}</button>
           </router-link>
         </div>
 
         <div class="source-card">
-          <h3>過去10年トレンド (Trend)</h3>
-          <p>過去10年間の定点当たり報告数の推移データ。歴史的なトレンドと現在の状況を比較できます。</p>
+          <h3>{{ $t('home.trendTitle') }}</h3>
+          <p>{{ $t('home.trendDesc') }}</p>
           <router-link to="/trend">
-            <button>データを見る</button>
+            <button>{{ $t('home.viewData') }}</button>
           </router-link>
         </div>
       </div>
 
       <div class="data-notice">
         <div class="notice-section">
-          <h3>データ出典</h3>
+          <h3>{{ $t('home.dataSourceTitle') }}</h3>
           <p>
-            国立健康危機管理研究機構 感染症情報提供サイトのデータを加工して作成<br>
+            {{ $t('home.dataSourceBody') }}<br>
             <a href="https://id-info.jihs.go.jp/surveillance/idwr/" target="_blank" rel="noopener noreferrer">
               https://id-info.jihs.go.jp/surveillance/idwr/
             </a><br>
-            利用規約:
+            {{ $t('home.termsLabel') }}
             <a href="https://id-info.jihs.go.jp/usage-contract.html" target="_blank" rel="noopener noreferrer">
               https://id-info.jihs.go.jp/usage-contract.html
             </a>
